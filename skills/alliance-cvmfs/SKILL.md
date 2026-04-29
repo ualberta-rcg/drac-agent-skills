@@ -147,7 +147,13 @@ module load StdEnv/2023 gcc/<ver> cuda/<ver> python/<ver>
 virtualenv --no-download $SCRATCH/venvs/myenv
 source $SCRATCH/venvs/myenv/bin/activate
 
-# 3. Install
+# 3. Check what's available in the wheelhouse before installing
+avail_wheels <package>            # shows name, version, python tag, arch
+avail_wheels -r requirements.txt  # gap-check a whole requirements file
+# avail_wheels requires a python module to be loaded; if not found, use the absolute path:
+# /cvmfs/soft.computecanada.ca/custom/bin/avail_wheels
+
+# 4. Install
 pip install --no-index --upgrade pip
 pip install --no-index torch torchvision   # pulls from cluster's local wheelhouse
 # If a package is missing from the wheelhouse, drop --no-index to fall back to pip/proxy
@@ -234,6 +240,9 @@ module --force purge
 
 # Collections
 module save mystack && module restore mystack
+
+# Wheelhouse
+avail_wheels <package>            # prebuilt pip wheels on CVMFS; load python/<ver> first
 
 # Venv
 virtualenv --no-download $SCRATCH/venvs/<name>
