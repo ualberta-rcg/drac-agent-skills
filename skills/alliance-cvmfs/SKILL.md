@@ -1,128 +1,122 @@
 ---
 name: alliance-cvmfs
 description: >-
-  Explains how to discover and load the Digital Research Alliance software stack from
-  CVMFS on any Alliance cluster using Lmod. Use when the user mentions module, Lmod,
-  StdEnv, software versions, compilers, CUDA, cuDNN, MPI, Python modules, venvs on
-  compute nodes, or paths under /cvmfs/soft.computecanada.ca and
-  /cvmfs/restricted.computecanada.ca. Teaches the module spider workflow, prerequisite
-  chains, tier visibility versus module avail, and patterns for Python virtual
-  environments tied to module interpreters. Job submission lives in the alliance-slurm
-  skill.
+  Explains how to discover and load the Digital Research Alliance (DRAC) software
+  stack from CVMFS on any Alliance cluster using Lmod. Use when the user mentions
+  module, Lmod, StdEnv, software versions, compilers, CUDA, cuDNN, MPI, Python
+  modules, venvs on compute nodes, or paths under /cvmfs/soft.computecanada.ca or
+  /cvmfs/restricted.computecanada.ca. Covers the module spider workflow, prerequisite
+  chains, tier visibility, and Python virtual environments. Job submission lives in
+  the alliance-slurm skill.
 ---
 
 # Alliance (DRAC) — CVMFS Software Stack
 
-Software on Alliance clusters comes from **CVMFS** (read-only, network-mounted) and is
-accessed entirely through **Lmod** (`module` command). Nothing needs to be installed.
-Login and compute nodes see the same stack.
+Software on Alliance clusters is served from **CVMFS** (read-only, network-mounted)
+and accessed entirely through **Lmod** (`module` command). Login and compute nodes see
+the same stack.
 
 ```
-/cvmfs/soft.computecanada.ca        # Alliance software stack
-/cvmfs/restricted.computecanada.ca  # licensed software (MATLAB, etc.)
+/cvmfs/soft.computecanada.ca         # Alliance software stack
+/cvmfs/restricted.computecanada.ca   # licensed software (MATLAB, etc.)
+/cvmfs/containers.computecanada.ca   # pre-built Apptainer/Singularity images
 ```
 
-## Rule zero: never guess versions — query them
+---
 
-**Module versions on CVMFS change. Do not assume a specific `python/3.X.Y`, `cuda/X.Y`,
-`gcc/X.Y`, `cudnn/X.Y.Z.W`, etc. exists.** Always confirm with `module spider` before
-loading. Guessing a version that doesn't exist is the single most common failure mode,
-and it is avoidable in one command.
+## Discovery: always use `module spider`
+
+**Never guess versions.** Module versions on CVMFS change; guessing one that doesn't
+exist is the most common failure mode. Always confirm with `module spider` first.
 
 ```bash
-module spider <name>              # list all versions of <name>
-module spider <name>/<version>    # show the exact prerequisites required to load it
+module spider <name>              # list all available versions
+module spider <name>/<version>    # show the exact prerequisite sequence to load it
 ```
 
-The `module spider <name>/<version>` output includes a "You will need to load" section
-— that sequence is authoritative. Use it verbatim.
+The `spider <name>/<version>` output shows one or more valid "You will need to load"
+lines. **Pick one line and load it as a complete set** — do not mix lines.
 
-## How the hierarchy works (why `module avail` lies)
+### Why `module avail` is incomplete
 
-Lmod is tiered. `module avail` only shows what is currently unlocked by what's already
-loaded. `module spider` searches the whole tree regardless of state. **For discovery,
-always use `spider`, not `avail`.**
+Lmod is tiered. `module avail` only shows what the currently loaded modules have
+unlocked; it will silently omit CUDA-tier packages (cuDNN, NCCL, etc.) until a
+compiler and CUDA are already loaded. **For discovery, use `spider` — it searches the
+full tree regardless of what's loaded.**
 
 ```
-Core                  # compilers, Python, CUDA, utilities — always visible
-└── Compiler tier     # unlocked after loading a compiler (gcc, intel, nvhpc)
-    └── CUDA tier     # unlocked after loading CUDA
-        └── MPI tier  # unlocked after loading MPI
+Core (always visible)
+└── Compiler tier (unlocked after: gcc / intel / nvhpc)
+    └── CUDA tier (unlocked after: cuda)
+        └── MPI tier (unlocked after: openmpi / …)
 ```
 
-Practical consequence: to see CUDA-tier libraries like cuDNN or NCCL in `avail`, you
-must first load a compiler and CUDA. To find them without loading anything, use `spider`.
+StdEnv also loads a base stack (gcccore, UCX, OpenMPI, etc.). `spider` is the right
+tool when you're not sure what tier a package lives in.
 
-## Essential commands
+### Discovery workflow
 
 ```bash
-module list                       # what is currently loaded
-module spider <name>              # FIND anything (searches full tree)
-module spider <name>/<version>    # show required prerequisite sequence
-module avail                      # what's visible given currently loaded modules
-module load <name>/<version>      # load (use exact version from spider)
-module unload <name>
-module swap <old> <new>
-module show <name>                # inspect what a module sets (paths, env vars)
-module --force purge              # full reset (StdEnv is sticky; plain purge won't remove it)
-module save <collection>          # snapshot current stack
-module restore <collection>       # reload a snapshot
-```
-
-## The base environment
-
-`StdEnv/2023` is sticky and normally already active. It loads `CCconfig`, which sets
-useful variables:
-
-```
-$SCRATCH        → /scratch/$USER
-$PROJECT        → default project directory
-$LOCAL_SCRATCH  → $SLURM_TMPDIR (inside jobs)
-$CC_CLUSTER     → name of the current cluster
-quota           → alias for diskusage_report
-```
-
-Use `$SCRATCH` and `$PROJECT` instead of hardcoded paths. To check the current StdEnv
-version or look for alternatives: `module spider StdEnv`.
-
-## Standard discovery workflow
-
-Before writing a job script or installing anything, run through this:
-
-```bash
-# 1. What versions of each core piece are actually available?
+# 1. Find real versions for each component
 module spider python
 module spider gcc
 module spider cuda
 module spider cudnn
-module spider openmpi
 
-# 2. For the specific version you want, what do you need to load first?
-module spider cuda/<version-from-step-1>
-module spider cudnn/<version-from-step-1>
+# 2. Get the exact prerequisite sequence for your chosen version
+module spider cuda/<version>
+module spider cudnn/<version>
 
-# 3. Load the sequence spider prescribed, then verify
-module load StdEnv/2023 <compiler>/<ver> <cuda>/<ver> <python>/<ver>
+# 3. Load the prescribed sequence, then verify
+module load StdEnv/2023 gcc/<ver> cuda/<ver> python/<ver>
 module list
 which python && python --version
-nvcc --version     # if CUDA loaded
+nvcc --version
 ```
 
-Only then proceed to install packages or run code.
+---
 
-## Typical load sequences (fill in versions from `spider`)
+## Essential commands
+
+| Command | Purpose |
+|---|---|
+| `module spider <name>[/<ver>]` | Discover versions and prerequisites |
+| `module load <name>/<ver>` | Load a module (use exact version from spider) |
+| `module list` | What is currently loaded |
+| `module show <name>` | Inspect paths and env vars a module sets |
+| `module --force purge` | Full reset (plain `purge` leaves sticky StdEnv) |
+| `module save / restore <name>` | Snapshot and reload a tested stack |
+
+---
+
+## The base environment
+
+`StdEnv/2023` is sticky and normally active on login. It loads `CCconfig`, which sets:
+
+```
+$SCRATCH        → /scratch/$USER  (always set)
+$CC_CLUSTER     → cluster name    (always set)
+$PROJECT        → default RAC project directory (set when a project is allocated)
+$LOCAL_SCRATCH  → $SLURM_TMPDIR  (set inside jobs only)
+```
+
+Use `$SCRATCH` and `$PROJECT` instead of hardcoded paths.
+To check the current StdEnv or find alternatives: `module spider StdEnv`.
+
+---
+
+## Typical load patterns
+
+Fill `<ver>` from `module spider` — never from memory.
 
 ```bash
 # Python only
 module load StdEnv/2023 python/<ver>
 
-# CUDA development
-module load StdEnv/2023 gcc/<ver> cuda/<ver>
-
-# ML/DL work (most common)
+# ML / deep learning (most common)
 module load StdEnv/2023 gcc/<ver> cuda/<ver> python/<ver>
 
-# + cuDNN (spider cudnn/<ver> to confirm the required cuda/<ver>)
+# + cuDNN (confirm required cuda/<ver> via spider cudnn/<ver>)
 module load StdEnv/2023 gcc/<ver> cuda/<ver> cudnn/<ver>
 
 # MPI
@@ -135,46 +129,40 @@ module load StdEnv/2023 gcc/<ver> cuda/<ver> openmpi/<ver>
 module load apptainer
 ```
 
-Scientific Python bundles exist (`scipy-stack`, `python-build-bundle`) and pull in
-numpy/scipy/pandas/matplotlib/etc. Find current versions with
-`module spider scipy-stack`.
+Scientific Python bundles (`scipy-stack`, `python-build-bundle`) pull in numpy,
+scipy, pandas, matplotlib, etc. Find versions: `module spider scipy-stack`.
+
+---
 
 ## Python virtual environments
 
-Use `virtualenv` against the **module-provided Python**. Do not use conda from CVMFS
-— it fights the module hierarchy.
-
-### Creating a venv
+Use `virtualenv` against the module-provided Python. Do not use conda from CVMFS —
+it conflicts with the module hierarchy.
 
 ```bash
-# Load the exact stack the venv should target
+# 1. Load the exact stack the venv should target
 module load StdEnv/2023 gcc/<ver> cuda/<ver> python/<ver>
 
+# 2. Create and activate
 virtualenv --no-download $SCRATCH/venvs/myenv
 source $SCRATCH/venvs/myenv/bin/activate
+
+# 3. Install
 pip install --no-index --upgrade pip
-pip install --no-index torch torchvision   # pulls from the cluster's local wheelhouse
+pip install --no-index torch torchvision   # pulls from cluster's local wheelhouse
+# If a package is missing from the wheelhouse, drop --no-index to fall back to pip/proxy
 ```
 
-`--no-index` pulls from the cluster's cached wheelhouse (fast, no egress). Omit it if
-a package isn't available locally — pip will then go through the HTTPS proxy.
+**Using the venv later:** load the *same* module stack, then activate. A venv built
+against one Python module breaks if activated under a different one — recreate it if
+imports mysteriously fail after a module change.
 
-### Using a venv later
+---
 
-Load the **same module stack** the venv was built against, then activate:
+## Modules inside jobs
 
-```bash
-module load StdEnv/2023 gcc/<ver> cuda/<ver> python/<ver>
-source $SCRATCH/venvs/myenv/bin/activate
-```
-
-A venv built against one Python module will break if activated under a different one.
-If imports mysteriously fail after a module change, recreate the venv.
-
-## Using modules inside jobs
-
-Jobs do not inherit the submit shell's module state reliably. **Always load modules
-explicitly inside the job script.** A clean pattern:
+Jobs do not reliably inherit the submit shell's module state. **Always load modules
+explicitly in the job script.**
 
 ```bash
 module --force purge
@@ -182,69 +170,77 @@ module load StdEnv/2023 gcc/<ver> cuda/<ver> python/<ver>
 source $SCRATCH/venvs/myenv/bin/activate
 ```
 
-For a tested stack you use regularly, save it once and restore it in jobs:
+For a tested stack you reuse often, save it once and restore it in every job:
 
 ```bash
-# Interactively, after loading and testing your stack:
+# Interactively (after loading and verifying):
 module save mystack
 
 # In the job script:
 module restore mystack
 ```
 
-## Containers via Apptainer
+---
+
+## Containers (Apptainer)
 
 ```bash
 module load apptainer
 apptainer exec --nv path/to/image.sif python train.py   # --nv exposes GPUs
 ```
 
-CVMFS is visible inside Apptainer containers by default.
+CVMFS is visible inside containers. Pre-built images are available under
+`/cvmfs/containers.computecanada.ca`.
 
-## Storage quotas
+---
+
+## Storage
 
 ```bash
-quota                # alias for diskusage_report
-diskusage_report     # /home, /scratch, /project usage and limits
+diskusage_report     # authoritative usage and quota for /home, /scratch, /project
 ```
+
+`quota` may alias to `diskusage_report` in interactive shells on some clusters, but
+this is not guaranteed — use `diskusage_report` in scripts.
+
+---
 
 ## Troubleshooting
 
-| Symptom | Cause | Fix |
+| Symptom | Likely cause | Fix |
 |---|---|---|
-| `module load X/Y.Z` → "not found" | Guessed a version that doesn't exist, or missing prerequisite | `module spider X` for real versions; `module spider X/Y.Z` for the required load sequence |
-| `module avail` doesn't list expected CUDA-tier package | Hierarchy not unlocked | Load compiler + CUDA first, or use `module spider` which ignores hierarchy |
-| `import` fails in a venv that worked before | venv targeted a different Python module | Reload the original module stack, or recreate the venv |
-| Module works on login node, fails in job | Job didn't re-load modules | Add explicit `module load ...` inside the job script |
+| `module load X/Y.Z` → not found | Guessed a version; missing prerequisite | `module spider X` for real versions; `module spider X/Y.Z` for the load sequence |
+| `module avail` missing an expected package | Tier not yet unlocked | Load compiler (+ CUDA if needed) first, or use `module spider` |
+| `import` fails in a venv that worked before | venv targeted a different Python module | Reload the original module stack; recreate the venv if necessary |
+| Module works on login, fails in job | Job didn't re-load modules | Add explicit `module load …` inside the job script |
 | `module purge` leaves StdEnv loaded | StdEnv is sticky | `module --force purge` |
-| First access to a module is slow | CVMFS cache cold | Normal; subsequent accesses are cached by the local Squid |
-| Package not in the stack or wheelhouse | Not packaged | Install into a venv with pip (egress goes through the proxy automatically) |
+
+---
 
 ## Quick reference
 
 ```bash
-# Discover (do this before loading anything)
+# Discover
 module spider <name>
-module spider <name>/<version>
+module spider <name>/<version>       # prerequisite sequence — pick one line
 
-# Load (versions from spider, not memory)
+# Load
 module load StdEnv/2023 gcc/<ver> cuda/<ver> python/<ver>
 
-# Inspect
+# Inspect / reset
 module list
 module show <name>
-echo $SCRATCH $PROJECT $CC_CLUSTER
-quota
-
-# Reset
 module --force purge
 
 # Collections
-module save <name>
-module restore <name>
+module save mystack && module restore mystack
 
-# Venv lifecycle
+# Venv
 virtualenv --no-download $SCRATCH/venvs/<name>
 source $SCRATCH/venvs/<name>/bin/activate
-pip install --no-index <package>
+pip install --no-index <package>     # drop --no-index if not in wheelhouse
+
+# Storage
+diskusage_report
+echo $SCRATCH $PROJECT $CC_CLUSTER
 ```
