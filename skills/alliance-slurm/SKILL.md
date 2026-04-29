@@ -64,7 +64,7 @@ causes instant rejection.
 | `--account=<acct>` | Required when you have multiple accounts or must charge a specific project. Check with `sacctmgr show assoc user=$USER`; omit only if your default account is correct. |
 | `--time=HH:MM:SS` | **Default is 60 min.** Drives partition routing. Always set. |
 | `--mem=...` | **Default is very low**, cgroup-enforced. Always set. |
-| `--gres=gpu:<type>:N` | Use exact type string from `sinfo` discovery. Bare `gpu:N` is unreliable. |
+| `--gres=gpu:<type>:N` | Use exact type string from `sinfo` discovery. Bare gpu:N is unreliable and is rejected on general-purpose clusters (fir, nibi, rorqual, and similar). Always use the full type string. |
 | `--cpus-per-task=N` | Default is 1. |
 
 ## Requesting GPUs
@@ -74,7 +74,27 @@ causes instant rejection.
 --gres=gpu:<type>:4     # multiple (verify node topology first)
 ```
 
-### Fractional / soft-MIG GPU (cluster-dependent)
+### MIG, fractional / soft-MIG GPU (cluster-dependent)
+
+#### Standard MIG (most common)
+MIG-capable nodes (e.g. A100) expose named slice GRES entries. Discover them the same
+way as regular GPUs:
+
+```bash
+sinfo -h -o "%G" --Node | sort -u
+# MIG slices appear as e.g.: gpu:a100.1g.10gb:7,gpu:a100:4
+```
+
+Request a slice using the exact string from the inventory:
+
+```bash
+--gres=gpu:a100.1g.10gb:1    # 1/7th slice (10 GB)
+--gres=gpu:a100.3g.40gb:1    # 3/7th slice (40 GB)
+```
+
+Count must always be `1`. Use the exact slice name — do not guess.
+
+#### Soft-MIG / fractional (less common)
 
 Support is indicated by composite GRES entries, **not** by MIG strings in `sinfo`.
 Check the `%G` column:
