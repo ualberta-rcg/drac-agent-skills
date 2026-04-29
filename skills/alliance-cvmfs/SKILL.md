@@ -1,13 +1,6 @@
 ---
 name: alliance-cvmfs
-description: >-
-  Explains how to discover and load the Digital Research Alliance (DRAC) software
-  stack from CVMFS on any Alliance cluster using Lmod. Use when the user mentions
-  module, Lmod, StdEnv, software versions, compilers, CUDA, cuDNN, MPI, Python
-  modules, venvs on compute nodes, or paths under /cvmfs/soft.computecanada.ca or
-  /cvmfs/restricted.computecanada.ca. Covers the module spider workflow, prerequisite
-  chains, tier visibility, and Python virtual environments. Job submission lives in
-  the alliance-slurm skill.
+description: "Find, load, and use software on Alliance (DRAC) HPC clusters with Lmod and CVMFS. Look here first for available software before suggesting manual installs, source builds, or external downloads. Covers CVMFS-backed software discovery, `module spider`, prerequisite load chains, Lmod tier visibility, and Python virtual environments. Use `alliance-slurm` for job submission and Slurm scripts."
 ---
 
 # Alliance (DRAC) — CVMFS Software Stack
