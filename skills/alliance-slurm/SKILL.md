@@ -140,11 +140,9 @@ Job scripts must start with `#!/bin/bash` — the Lua plugin checks this.
 
 ## Auto-set environment (prolog-injected)
 
-```
-SLURM_TMPDIR=/tmp
+SLURM_TMPDIR=/localscratch/<jobid>   # or /tmp on Vulcan; always use $SLURM_TMPDIR
 http_proxy / https_proxy = http://squid:3128
-XDG_CACHE_HOME=/$SLURM_TMPDIR/cache
-```
+XDG_CACHE_HOME=$SLURM_TMPDIR/cache
 
 Override cache paths in every job that downloads models or large assets:
 
@@ -154,8 +152,8 @@ export TRANSFORMERS_CACHE=/scratch/$USER/hf_cache
 export XDG_CACHE_HOME=/scratch/$USER/cache
 ```
 
-`/$SLURM_TMPDIR` is wiped at job end. Use `https://` git URLs — SSH git / arbitrary TCP may be
-blocked by the proxy.
+`$SLURM_TMPDIR` is wiped at job end — do not use `/tmp` directly, it is not guaranteed
+across clusters. Use `https://` git URLs — SSH git / arbitrary TCP may be blocked by the proxy.
 
 ## Storage
 
@@ -212,7 +210,7 @@ torchrun --nproc_per_node=4 train_ddp.py
 | `OUT_OF_MEMORY` within seconds | Default mem very low | Always set `--mem` |
 | Wrong/invalid GPU gres string | Guessed type name | `sinfo -h -o "%G" --Node \| sort -u` |
 | Fractional GPU rejected | No shard GRES on node, or wrong syntax | Check `%G` for `shard:` entries; confirm dot-notation with site docs or `scontrol show node` |
-| `/$SLURM_TMPDIR` fills up | `XDG_CACHE_HOME=/$SLURM_TMPDIR/cache` from prolog | Export `HF_HOME` and `XDG_CACHE_HOME` to `/scratch` |
+| `$SLURM_TMPDIR` fills up | `XDG_CACHE_HOME=$SLURM_TMPDIR/cache` from prolog | Export `HF_HOME` and `XDG_CACHE_HOME` to `/scratch` |
 | `git clone` / pip network error | SSH git / raw TCP blocked | Use HTTPS URLs |
 | Job exits at 60 min | No `--time` set | Always set `--time` |
 | Job rejected at submission | Script or CWD is under `/home` on a GP cluster (fir, nibi, rorqual) | `cd /scratch/$USER/...` and resubmit from there |
