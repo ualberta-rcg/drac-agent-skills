@@ -5,10 +5,10 @@ description: >-
   Alliance (DRAC) HPC clusters. Use when the user works with sbatch, salloc, srun,
   squeue, scancel, sacct, sinfo, sshare, sacctmgr, job scripts, partitions, QOS,
   accounts, fairshare, GPUs, or cluster defaults on any Alliance cluster. Covers the
-  Lua auto-routed partition layer, GPU discovery via gres, MIG/soft-MIG availability
-  checks, cgroup enforcement, time limits, interactive routing, ephemeral /tmp, proxied
-  egress, cache redirection, and discovery commands so accounts and partitions are
-  never guessed. Auth is via CCDB/LDAP; modules come from CVMFS.
+  Lua auto-routed partition layer, GPU discovery via GRES, fractional/soft-MIG
+  availability checks, cgroup enforcement, time limits, interactive routing, ephemeral
+  /tmp, proxied egress, cache redirection, and discovery commands so accounts and
+  partitions are never guessed. Auth is via CCDB/LDAP; modules come from CVMFS.
 ---
 
 # Alliance (DRAC) Slurm
@@ -19,104 +19,102 @@ discover before assuming. Auth is managed via CCDB; software modules come from C
 
 ## Discovery — never hardcode, always list
 
-Run these first. The AI must not guess account names, GPU types, partition names, or
-QOS values — they differ across clusters.
+Run these first on any new cluster. Never guess account names, GPU types, partition
+names, or QOS values.
 
 ```bash
-# Partitions and node state
-sinfo -s
-sinfo -o "%N %G %f %T" --Node | sort -u   # nodes, gres, features, state
+# Partitions and time limits
+sinfo -s                                            # TIMELIMIT column is authoritative
 
-# GPU types available (parse the gres column)
-sinfo -o "%G" --Node | grep -v none | sort -u
+# GPU GRES inventory (look for composite entries, e.g. gpu:l40s:4,shard:l40s:16)
+sinfo -h -o "%G" --Node | sort -u
+sinfo -h -o "%N %G %f" --Node | sort -u            # adds features (softmig, etc.)
 
-# Check for MIG / soft-MIG support on this cluster
-sinfo -o "%N %G %f" --Node | grep -i mig
+# Full GRES detail on a specific node
+scontrol show node <node> | grep -E 'Gres=|CfgTRES='
 
-# Accounts and QOS available to you
-sacctmgr show assoc user=$USER format=Account,QOS,DefaultQOS -p
+# Accounts available to you
+sacctmgr show assoc user=$USER format=Account,DefaultAccount,QOS -p
 
-# QOS limits (walltime, TRES, priority)
+# QOS limits (MaxWall / MaxTRES are often blank; prefer sinfo -s for walltime)
 sacctmgr show qos format=Name,MaxWall,MaxTRES,Priority -p
 
-# Fairshare
+# Fairshare / software
 sshare -U
-
-# Software stack
-module avail
-module spider <name>
+module avail && module spider <name>
 ```
 
-**Always run the gres discovery command above before writing GPU flags.** GPU type
-names (e.g. `v100l`, `a100`, `l40s`, `h100`, etc.) vary by cluster and node. Use
-the exact string found in `sinfo` output for `--gres`.
+**Always run GPU discovery before writing `--gres` flags.** GPU type names (`v100l`,
+`a100`, `l40s`, `h100`, …) differ by cluster and node.
 
-## Partitions — do not specify one
+## Partitions — usually omit
 
-A Lua plugin picks the partition automatically based on `--time`. **Omit `--partition`
-in nearly all cases.** This is the correct default on all Alliance clusters.
+A Lua plugin auto-routes jobs based on `--time`. **Omit `--partition` unless you have
+a concrete reason** (e.g. forcing CPU-only). Setting it with a mismatched `--time`
+causes instant rejection.
 
-- Time tiers range from a few hours up to a 7-day maximum. Requests over 7 days are
-  rejected.
-- `srun` and `salloc` (interactive) always route to the interactive partition regardless
-  of other flags. Interactive max is typically 3 hours; check with `sacctmgr show qos`.
-- If you do set `--partition` manually, `--time` must fit that partition's limits —
-  mismatches are rejected. Only do this if you have a concrete reason (e.g. forcing
-  CPU-only).
+- Time tiers go up to a 7-day maximum; requests over 7 days are rejected.
+- `srun`/`salloc` always route to the interactive partition. Check actual limits with
+  `sinfo -s` — GPU interactive is often longer than CPU interactive (e.g. 8 h vs 3 h).
 
-## Mandatory flags — defaults will burn you
+## Key flags
 
-| Flag                               | Why                                                              |
-| ---------------------------------- | ---------------------------------------------------------------- |
-| `--account=<acct>`                 | Required. List with `sacctmgr show assoc user=$USER`.            |
-| `--time=HH:MM:SS` or `D-HH:MM:SS` | **Default is 60 min.** Drives partition routing. Always set.     |
-| `--mem=...`                        | **Default is very low** (cluster-dependent). cgroup-enforced.    |
-| `--gres=gpu:<type>:N`              | Include the specific GPU type from discovery. Bare `gpu:N` is unreliable. |
-| `--cpus-per-task=N`                | Default is 1.                                                    |
+| Flag | Notes |
+|------|-------|
+| `--account=<acct>` | Required when you have multiple accounts or must charge a specific project. Check with `sacctmgr show assoc user=$USER`; omit only if your default account is correct. |
+| `--time=HH:MM:SS` | **Default is 60 min.** Drives partition routing. Always set. |
+| `--mem=...` | **Default is very low**, cgroup-enforced. Always set. |
+| `--gres=gpu:<type>:N` | Use exact type string from `sinfo` discovery. Bare `gpu:N` is unreliable. |
+| `--cpus-per-task=N` | Default is 1. |
 
 ## Requesting GPUs
 
-First discover the GPU type name for this cluster (see Discovery above), then:
-
 ```bash
 --gres=gpu:<type>:1     # one GPU
---gres=gpu:<type>:4     # multiple (check node topology first)
+--gres=gpu:<type>:4     # multiple (verify node topology first)
 ```
 
-### MIG and soft-MIG (cluster-dependent)
+### Fractional / soft-MIG GPU (cluster-dependent)
 
-Not all clusters support MIG or soft-MIG GPU partitioning. Before attempting fractional
-GPU requests, run:
+Support is indicated by composite GRES entries, **not** by MIG strings in `sinfo`.
+Check the `%G` column:
 
 ```bash
-sinfo -o "%N %G %f" --Node | grep -i mig
+sinfo -h -o "%G" --Node | sort -u
+# A softmig-capable node shows e.g.: gpu:l40s:4,shard:l40s:16
+# A plain GPU node shows:            gpu:l40s:4
 ```
 
-If MIG slices appear in the gres output, the cluster supports them. The notation varies
-— use exactly what `sinfo` reports. On clusters that support soft-MIG via dot notation:
+`shard:<type>:<N>` alongside `gpu:` means fractional requests are supported. You may
+also see `softmig` in the features column (`%f`). For full detail:
 
 ```bash
---gres=gpu:<type>.<denominator>:1   # e.g. gpu:l40s.4:1 for 1/4 slice
+scontrol show node <node> | grep -E 'Gres=|CfgTRES='
 ```
 
-Common denominators are `2`, `3`, or `4`. Count must be `1`. Do not attempt fractional
-requests on clusters where `sinfo` shows no MIG gres entries.
+The fractional request syntax uses dot notation — these strings appear in your job
+flags, **not** as inventory lines in `sinfo`:
+
+```bash
+--gres=gpu:<type>.<denominator>:1   # e.g. gpu:l40s.4:1 for a 1/4 slice
+```
+
+Common denominators: `2`, `3`, `4`. Count must always be `1`. Do not attempt
+fractional requests on nodes where `%G` shows no `shard:` entry.
 
 ## Submitting
 
 ```bash
-# Batch script
+# Batch
 sbatch job.sh
-
-# One-liner batch (no script file)
 sbatch --account=<acct> --gres=gpu:<type>:1 --mem=32G --time=1:00:00 \
        --wrap="python train.py"
 
-# Interactive shell (always lands on interactive partition)
+# Interactive shell
 srun --account=<acct> --gres=gpu:<type>:1 --cpus-per-task=4 --mem=32G \
      --time=2:00:00 --pty bash
 
-# Allocation only; dispatch with srun from inside
+# Allocation only
 salloc --account=<acct> --gres=gpu:<type>:2 --mem=64G --time=2:00:00
 ```
 
@@ -124,196 +122,100 @@ Job scripts must start with `#!/bin/bash` — the Lua plugin checks this.
 
 ## Auto-set environment (prolog-injected)
 
-Every job inherits these from the prolog:
-
 ```
 SLURM_TMPDIR=/tmp
-http_proxy=http://squid:3128
-https_proxy=http://squid:3128
-no_proxy=localhost,127.0.0.1
+http_proxy / https_proxy = http://squid:3128
 XDG_CACHE_HOME=/tmp/cache
 ```
 
-Key implications:
+Override cache paths in every job that downloads models or large assets:
 
-- **Egress goes through a Squid proxy.** HTTPS works. SSH-based git and arbitrary TCP
-  may not. Always use `https://github.com/...`, not `git@github.com:...`.
+```bash
+export HF_HOME=/scratch/$USER/hf_cache
+export TRANSFORMERS_CACHE=/scratch/$USER/hf_cache
+export XDG_CACHE_HOME=/scratch/$USER/cache
+```
 
-- **`XDG_CACHE_HOME` points at ephemeral `/tmp`.** HuggingFace, pip, and similar caches
-  will vanish at job end and can fill `/tmp`. Override at the top of every job script
-  that downloads models or large assets:
-
-  ```bash
-  export HF_HOME=/scratch/$USER/hf_cache
-  export TRANSFORMERS_CACHE=/scratch/$USER/hf_cache
-  export XDG_CACHE_HOME=/scratch/$USER/cache
-  ```
-
-- **`/tmp` (`SLURM_TMPDIR`) is wiped after the job ends.** Fine for transient scratch,
-  never for outputs you need to keep.
+`/tmp` is wiped at job end. Use `https://` git URLs — SSH git / arbitrary TCP may be
+blocked by the proxy.
 
 ## Storage
 
-| Path               | Use                                                             |
-| ------------------ | --------------------------------------------------------------- |
-| `/home/$USER`      | Code, configs. Persistent. Not for heavy I/O or large data.     |
-| `/scratch/$USER`   | Datasets, checkpoints, outputs. Fast, large, **not backed up**. |
-| `/project/<group>` | Persistent group/project space.                                 |
+`/home/$USER` — code/configs, persistent, not for heavy I/O. `/scratch/$USER` — datasets/checkpoints, fast, large, **not backed up**. `/project/<group>` — persistent group space.
 
-Do all job I/O against `/scratch/$USER`.
-
-## Monitoring
+## Monitoring & accounting
 
 ```bash
-squeue -u $USER
-squeue -u $USER -o "%i %r %R"     # pending reason
-squeue -u $USER --start            # estimated start time
-scontrol show job <JOBID>          # full detail
-tail -f slurm-<JOBID>.out
-sattach <JOBID>.0                  # attach to running step's stdio
-seff <JOBID>                       # CPU/mem efficiency (after completion)
-```
-
-You can `ssh <node>` only to nodes where you have an active allocation.
-
-## History & accounting
-
-```bash
+squeue -u $USER -o "%i %r %R"            # queue + pending reason
+scontrol show job <JOBID>
+seff <JOBID>                              # CPU/mem efficiency (post-completion)
+sattach <JOBID>.0                         # attach to running stdio (if available)
 sacct -u $USER -X --starttime=now-7days \
       --format=JobID,JobName,State,Elapsed,AllocCPUS,ReqMem,MaxRSS
-
-sacct -j <JOBID> --format=JobID,State,Elapsed,MaxRSS,CPUTime
-
-sprio -u $USER       # priority breakdown for pending jobs
-sshare -U            # fairshare score and recent usage
-```
-
-Job states: `PENDING`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`, `TIMEOUT`,
-`OUT_OF_MEMORY`, `NODE_FAIL`.
-
-## Managing jobs
-
-```bash
-scancel <JOBID>
-scancel -u $USER --state=PENDING
-scontrol hold <JOBID>
-scontrol release <JOBID>
-scontrol requeue <JOBID>
-scontrol update JobId=<JOBID> TimeLimit=2:00:00    # only while pending
+sprio -u $USER && sshare -U              # priority and fairshare
 ```
 
 ## Job script templates
 
 ### Single GPU
-
 ```bash
 #!/bin/bash
 #SBATCH --job-name=train
 #SBATCH --account=<acct>
-#SBATCH --gres=gpu:<type>:1          # replace <type> from sinfo discovery
+#SBATCH --gres=gpu:<type>:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=4:00:00
 #SBATCH --output=%x_%j.out
-#SBATCH --error=%x_%j.err
 
 export HF_HOME=/scratch/$USER/hf_cache
 export XDG_CACHE_HOME=/scratch/$USER/cache
 
-module load StdEnv/2023 cuda/12.x python/3.x   # confirm versions with module avail
+module load StdEnv/2023 cuda/12.x python/3.x
 source ~/venvs/myenv/bin/activate
 python train.py
 ```
 
-### Multi-GPU, single node
-
+### Multi-GPU / array (flag patterns)
 ```bash
+# Single node 4 GPUs
 #SBATCH --gres=gpu:<type>:4
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=256G
-#SBATCH --time=12:00:00
-
 torchrun --nproc_per_node=4 train_ddp.py
-```
 
-### Multi-node
-
-```bash
-#SBATCH --nodes=2
-#SBATCH --ntasks-per-node=4
-#SBATCH --gres=gpu:<type>:4
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=200G
-#SBATCH --time=12:00:00
-
-nodes=( $(scontrol show hostnames $SLURM_JOB_NODELIST) )
-master=${nodes[0]}
-torchrun --nnodes=$SLURM_NNODES --nproc_per_node=4 \
-         --rdzv_id=$SLURM_JOB_ID --rdzv_backend=c10d \
-         --rdzv_endpoint=$master:29500 train.py
-```
-
-### Job array
-
-```bash
-#SBATCH --array=0-9
-#SBATCH --gres=gpu:<type>:1
-#SBATCH --mem=32G
-#SBATCH --time=2:00:00
-#SBATCH --output=%x_%A_%a.out
-
-python train.py --config configs/config_${SLURM_ARRAY_TASK_ID}.yaml
-```
-
-Arrays can be throttled: `--array=1-100%5` (100 tasks, 5 concurrent max).
-
-## Useful in-job variables
-
-```
-$SLURM_JOB_ID  $SLURM_JOB_NAME  $SLURM_SUBMIT_DIR
-$SLURM_NTASKS  $SLURM_CPUS_PER_TASK  $SLURM_MEM_PER_NODE
-$SLURM_JOB_NODELIST  $SLURM_NNODES  $SLURM_GPUS_ON_NODE
-$SLURM_ARRAY_TASK_ID  $SLURM_TMPDIR
+# Multi-node: add --nodes=2 --ntasks-per-node=4; use scontrol show hostnames for master node
+# Array: --array=0-9 (or 1-100%5 to throttle); use $SLURM_ARRAY_TASK_ID in script
 ```
 
 ## Common pitfalls
 
-| Symptom                                  | Cause                                      | Fix                                                   |
-| ---------------------------------------- | ------------------------------------------ | ----------------------------------------------------- |
-| "partition does not exist or cannot fit" | `--partition` set with mismatched `--time` | Drop `--partition`; let auto-routing handle it        |
-| "exceeds maximum walltime"               | `--time` > 7 days                          | Hard cap; use checkpointing                           |
-| `OUT_OF_MEMORY` within seconds           | Default mem is very low                    | Always set `--mem`                                    |
-| Wrong or invalid GPU gres string         | Guessed GPU type name                      | Run `sinfo -o "%G" --Node` to get the exact name      |
-| Fractional GPU rejected                  | Cluster doesn't support soft-MIG           | Check `sinfo` for MIG entries first                   |
-| `/tmp` filled by HF/pip cache            | `XDG_CACHE_HOME=/tmp/cache` from prolog    | Export `HF_HOME` and `XDG_CACHE_HOME` to `/scratch`  |
-| `git clone` or pip network error         | SSH git / raw TCP blocked by proxy         | Use HTTPS URLs; `http(s)_proxy` env vars are set      |
-| Job exits at 60 min                      | No `--time` set                            | Always set `--time`                                   |
-| `ssh <node>` refused                     | No active allocation on that node          | Only allowed where you have a running job             |
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| "partition does not exist or cannot fit" | `--partition` with mismatched `--time` | Drop `--partition`; let Lua route |
+| `OUT_OF_MEMORY` within seconds | Default mem very low | Always set `--mem` |
+| Wrong/invalid GPU gres string | Guessed type name | `sinfo -h -o "%G" --Node \| sort -u` |
+| Fractional GPU rejected | No shard GRES on node, or wrong syntax | Check `%G` for `shard:` entries; confirm dot-notation with site docs or `scontrol show node` |
+| `/tmp` fills up | `XDG_CACHE_HOME=/tmp/cache` from prolog | Export `HF_HOME` and `XDG_CACHE_HOME` to `/scratch` |
+| `git clone` / pip network error | SSH git / raw TCP blocked | Use HTTPS URLs |
+| Job exits at 60 min | No `--time` set | Always set `--time` |
 
 ## Quick reference
 
 ```bash
-# Discover (always do this first on a new cluster)
-sinfo -s
-sinfo -o "%G" --Node | grep -v none | sort -u    # GPU types
-sinfo -o "%N %G %f" --Node | grep -i mig         # MIG availability
-sacctmgr show assoc user=$USER format=Account,QOS -p
-sacctmgr show qos format=Name,MaxWall,Priority -p
+# Discover
+sinfo -s                                             # partitions + time limits
+sinfo -h -o "%G" --Node | sort -u                   # GPU GRES (look for shard: for fractional)
+sinfo -h -o "%N %G %f" --Node | sort -u             # add features (softmig, etc.)
+scontrol show node <node> | grep -E 'Gres=|CfgTRES='
+sacctmgr show assoc user=$USER format=Account,DefaultAccount,QOS -p
 
-# Submit
+# Submit / interactive
 sbatch job.sh
 srun --account=<acct> --gres=gpu:<type>:1 --mem=32G --time=1:00:00 --pty bash
 
-# Watch
+# Watch / inspect / manage
 squeue -u $USER
-tail -f slurm-<JOBID>.out
-
-# Inspect
 scontrol show job <JOBID>
 seff <JOBID>
-sacct -j <JOBID> --format=JobID,State,Elapsed,MaxRSS
-
-# Manage
 scancel <JOBID>
 scontrol update JobId=<JOBID> TimeLimit=4:00:00
 ```
