@@ -161,7 +161,7 @@ blocked by the proxy.
 
 ## Storage
 
-`/home/$USER` — code/configs, persistent, not for heavy I/O. `/scratch/$USER` — datasets/checkpoints, fast, large, **not backed up**. `/project/<group>` — persistent group space.
+`/home/$USER` — code/configs, persistent, not for heavy I/O. **Job scripts must not be submitted from `/home` on general-purpose clusters (fir, nibi, rorqual, and similar)** — move scripts and set your working directory under `/scratch` or `/project` before calling `sbatch`. `/scratch/$USER` — datasets/checkpoints, fast, large, **not backed up**. `/project/<group>` — persistent group space.
 
 ## Monitoring & accounting
 
@@ -217,6 +217,7 @@ torchrun --nproc_per_node=4 train_ddp.py
 | `/tmp` fills up | `XDG_CACHE_HOME=/tmp/cache` from prolog | Export `HF_HOME` and `XDG_CACHE_HOME` to `/scratch` |
 | `git clone` / pip network error | SSH git / raw TCP blocked | Use HTTPS URLs |
 | Job exits at 60 min | No `--time` set | Always set `--time` |
+| Job rejected at submission | Script or CWD is under `/home` on a GP cluster (fir, nibi, rorqual) | `cd /scratch/$USER/...` and resubmit from there |
 
 ## Quick reference
 
