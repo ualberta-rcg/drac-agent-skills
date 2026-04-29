@@ -241,12 +241,10 @@ module --force purge
 # Collections
 module save mystack && module restore mystack
 
-# Wheelhouse
-avail_wheels <package>            # prebuilt pip wheels on CVMFS; load python/<ver> first
-
 # Venv
 virtualenv --no-download $SCRATCH/venvs/<name>
 source $SCRATCH/venvs/<name>/bin/activate
+avail_wheels <package>               # check wheelhouse first; load python/<ver> first
 pip install --no-index <package>     # drop --no-index if not in wheelhouse
 
 # Storage
