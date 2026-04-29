@@ -1,14 +1,12 @@
 ---
 name: alliance-slurm
 description: >-
-  Guides Slurm job submission, scheduling, accounting, and troubleshooting on
-  Alliance (DRAC) HPC clusters. Use when the user works with sbatch, salloc, srun,
-  squeue, scancel, sacct, sinfo, sshare, sacctmgr, job scripts, partitions, QOS,
-  accounts, fairshare, GPUs, or cluster defaults on any Alliance cluster. Covers the
-  Lua auto-routed partition layer, GPU discovery via GRES, fractional/soft-MIG
-  availability checks, cgroup enforcement, time limits, interactive routing, ephemeral
-  /$SLURM_TMPDIR, proxied egress, cache redirection, and discovery commands so accounts and
-  partitions are never guessed. Auth is via CCDB/LDAP; modules come from CVMFS.
+  Slurm job submission, scheduling, accounting, and troubleshooting on Alliance
+  (DRAC) HPC clusters. Covers sbatch, salloc, srun, squeue, scancel, sacct,
+  sinfo, sshare, sacctmgr, job scripts, partitions, QOS, accounts, fairshare,
+  and GPUs. Includes Lua auto-routing, GRES discovery, MIG/soft-MIG, GP cluster
+  restrictions (fir, nibi, rorqual), $SLURM_TMPDIR, proxied egress, and cache
+  redirection. Auth via CCDB; modules via CVMFS.
 ---
 
 # Alliance (DRAC) Slurm
