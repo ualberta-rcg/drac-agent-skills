@@ -2,16 +2,20 @@
 name: alliance-cvmfs
 description: >-
   Explains how to discover and load the Digital Research Alliance software stack from
-  CVMFS on Vulcan using Lmod. Use when the user mentions module, Lmod, StdEnv,
-  software versions, compilers, CUDA, cuDNN, MPI, Python modules, venvs on compute
-  nodes, or paths under /cvmfs/soft.computecanada.ca and /cvmfs/restricted.computecanada.ca.
-  Teaches the module spider workflow, prerequisite chains, tier visibility versus
-  module avail, and patterns for Python virtual environments tied to module interpreters.
+  CVMFS on any Alliance cluster using Lmod. Use when the user mentions module, Lmod,
+  StdEnv, software versions, compilers, CUDA, cuDNN, MPI, Python modules, venvs on
+  compute nodes, or paths under /cvmfs/soft.computecanada.ca and
+  /cvmfs/restricted.computecanada.ca. Teaches the module spider workflow, prerequisite
+  chains, tier visibility versus module avail, and patterns for Python virtual
+  environments tied to module interpreters. Job submission lives in the alliance-slurm
+  skill.
 ---
 
-# Vulcan — CVMFS Software Stack
+# Alliance (DRAC) — CVMFS Software Stack
 
-Software on Vulcan comes from **CVMFS** (read-only, network-mounted) and is accessed entirely through **Lmod** (`module` command). Nothing needs to be installed. Login and compute nodes see the same stack.
+Software on Alliance clusters comes from **CVMFS** (read-only, network-mounted) and is
+accessed entirely through **Lmod** (`module` command). Nothing needs to be installed.
+Login and compute nodes see the same stack.
 
 ```
 /cvmfs/soft.computecanada.ca        # Alliance software stack
@@ -20,18 +24,24 @@ Software on Vulcan comes from **CVMFS** (read-only, network-mounted) and is acce
 
 ## Rule zero: never guess versions — query them
 
-**Module versions on CVMFS change. Do not assume a specific `python/3.X.Y`, `cuda/X.Y`, `gcc/X.Y`, `cudnn/X.Y.Z.W`, etc. exists.** Always confirm with `module spider` before loading. Guessing a version that doesn't exist is the single most common failure mode, and it is avoidable in one command.
+**Module versions on CVMFS change. Do not assume a specific `python/3.X.Y`, `cuda/X.Y`,
+`gcc/X.Y`, `cudnn/X.Y.Z.W`, etc. exists.** Always confirm with `module spider` before
+loading. Guessing a version that doesn't exist is the single most common failure mode,
+and it is avoidable in one command.
 
 ```bash
 module spider <name>              # list all versions of <name>
 module spider <name>/<version>    # show the exact prerequisites required to load it
 ```
 
-The `module spider <name>/<version>` output includes a "You will need to load" section — that sequence is authoritative. Use it verbatim.
+The `module spider <name>/<version>` output includes a "You will need to load" section
+— that sequence is authoritative. Use it verbatim.
 
 ## How the hierarchy works (why `module avail` lies)
 
-Lmod is tiered. `module avail` only shows what is currently unlocked by what's already loaded. `module spider` searches the whole tree regardless of state. **For discovery, always use `spider`, not `avail`.**
+Lmod is tiered. `module avail` only shows what is currently unlocked by what's already
+loaded. `module spider` searches the whole tree regardless of state. **For discovery,
+always use `spider`, not `avail`.**
 
 ```
 Core                  # compilers, Python, CUDA, utilities — always visible
@@ -40,7 +50,8 @@ Core                  # compilers, Python, CUDA, utilities — always visible
         └── MPI tier  # unlocked after loading MPI
 ```
 
-Practical consequence: to see CUDA-tier libraries like cuDNN or NCCL in `avail`, you must first load a compiler and CUDA. To find them without loading anything, use `spider`.
+Practical consequence: to see CUDA-tier libraries like cuDNN or NCCL in `avail`, you
+must first load a compiler and CUDA. To find them without loading anything, use `spider`.
 
 ## Essential commands
 
@@ -60,24 +71,26 @@ module restore <collection>       # reload a snapshot
 
 ## The base environment
 
-`StdEnv/2023` is sticky and normally already active. It loads `CCconfig`, which sets useful variables:
+`StdEnv/2023` is sticky and normally already active. It loads `CCconfig`, which sets
+useful variables:
 
 ```
 $SCRATCH        → /scratch/$USER
 $PROJECT        → default project directory
 $LOCAL_SCRATCH  → $SLURM_TMPDIR (inside jobs)
-$CC_CLUSTER     → vulcan
+$CC_CLUSTER     → name of the current cluster
 quota           → alias for diskusage_report
 ```
 
-Use `$SCRATCH` and `$PROJECT` instead of hardcoded paths. To check the current StdEnv version or look for alternatives: `module spider StdEnv`.
+Use `$SCRATCH` and `$PROJECT` instead of hardcoded paths. To check the current StdEnv
+version or look for alternatives: `module spider StdEnv`.
 
 ## Standard discovery workflow
 
 Before writing a job script or installing anything, run through this:
 
 ```bash
-# 1. What versions of each core piece are actually available right now?
+# 1. What versions of each core piece are actually available?
 module spider python
 module spider gcc
 module spider cuda
@@ -122,11 +135,14 @@ module load StdEnv/2023 gcc/<ver> cuda/<ver> openmpi/<ver>
 module load apptainer
 ```
 
-Scientific Python bundles exist (`scipy-stack`, `python-build-bundle`) and pull in numpy/scipy/pandas/matplotlib/etc. Find current versions with `module spider scipy-stack`.
+Scientific Python bundles exist (`scipy-stack`, `python-build-bundle`) and pull in
+numpy/scipy/pandas/matplotlib/etc. Find current versions with
+`module spider scipy-stack`.
 
 ## Python virtual environments
 
-Use `virtualenv` against the **module-provided Python**. Do not use conda from CVMFS — it fights the hierarchy.
+Use `virtualenv` against the **module-provided Python**. Do not use conda from CVMFS
+— it fights the module hierarchy.
 
 ### Creating a venv
 
@@ -137,10 +153,11 @@ module load StdEnv/2023 gcc/<ver> cuda/<ver> python/<ver>
 virtualenv --no-download $SCRATCH/venvs/myenv
 source $SCRATCH/venvs/myenv/bin/activate
 pip install --no-index --upgrade pip
-pip install --no-index torch torchvision   # prefers the cluster's local wheelhouse
+pip install --no-index torch torchvision   # pulls from the cluster's local wheelhouse
 ```
 
-`--no-index` pulls from the cluster's cached wheelhouse (fast, no egress). Omit it if a package isn't available locally — pip will then go through the HTTPS proxy.
+`--no-index` pulls from the cluster's cached wheelhouse (fast, no egress). Omit it if
+a package isn't available locally — pip will then go through the HTTPS proxy.
 
 ### Using a venv later
 
@@ -151,11 +168,13 @@ module load StdEnv/2023 gcc/<ver> cuda/<ver> python/<ver>
 source $SCRATCH/venvs/myenv/bin/activate
 ```
 
-A venv built against one Python module will break if activated under a different one. If imports mysteriously fail, this is almost always why — recreate the venv.
+A venv built against one Python module will break if activated under a different one.
+If imports mysteriously fail after a module change, recreate the venv.
 
 ## Using modules inside jobs
 
-Jobs do not inherit the submit shell's module state reliably. **Always load modules explicitly inside the job script.** A clean pattern:
+Jobs do not inherit the submit shell's module state reliably. **Always load modules
+explicitly inside the job script.** A clean pattern:
 
 ```bash
 module --force purge
@@ -163,7 +182,7 @@ module load StdEnv/2023 gcc/<ver> cuda/<ver> python/<ver>
 source $SCRATCH/venvs/myenv/bin/activate
 ```
 
-For a tested stack you use often, save it once and restore it in jobs:
+For a tested stack you use regularly, save it once and restore it in jobs:
 
 ```bash
 # Interactively, after loading and testing your stack:
@@ -173,8 +192,6 @@ module save mystack
 module restore mystack
 ```
 
-Slurm directives, partitions, GPU requests, and job templates live in the `vulcan-slurm` skill — this file is only about the software side.
-
 ## Containers via Apptainer
 
 ```bash
@@ -182,7 +199,7 @@ module load apptainer
 apptainer exec --nv path/to/image.sif python train.py   # --nv exposes GPUs
 ```
 
-CVMFS itself is visible inside Apptainer containers by default.
+CVMFS is visible inside Apptainer containers by default.
 
 ## Storage quotas
 
