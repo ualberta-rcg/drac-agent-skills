@@ -1,11 +1,13 @@
 ---
 name: alliance-docs
 description: >-
-  Query the Alliance (DRAC) HPC docs RAG API so agents can look up how the
-  cluster, software stack, and site guides work before acting. Use broadly for
-  Alliance-specific HPC workflows, tools, software, Slurm, storage, accounts,
-  cloud, cluster behaviour, and local documentation that may be newer than the
-  model's training data.
+  Query the Alliance (DRAC) HPC docs RAG API before acting on Alliance-specific
+  HPC workflows, tools, software, Slurm, storage, accounts, cloud, cluster
+  behaviour, or local site guides. Use it to check current documentation that
+  may be newer than the model's training data. When available, combine this with
+  local system inspection and the relevant specialized Alliance skills, such as
+  `alliance-cvmfs` for CVMFS/Lmod/software work and `alliance-slurm` for job
+  submission, scheduling, GPU requests, and Slurm troubleshooting.
 ---
 
 # Alliance Docs RAG API
@@ -29,6 +31,8 @@ Query this skill before acting on Alliance-specific assumptions, especially for:
   package setup
 - Slurm and scheduling: job scripts, GPU flags, partitions, arrays, MPI jobs,
   accounts, QOS, and cluster-specific submission behaviour
+- Storage and filesystems: quota limits, purge policies, filesystem behaviour,
+  `/home`, `/scratch`, `/project`, nearline, and object storage
 - File transfer: Globus, data transfer nodes, rsync, SCP/SFTP, and transfer
   guidance
 - Accounts and access: CCDB, RAC/RAS allocations, passwords, MFA, SSH, and
@@ -41,6 +45,8 @@ Query this skill before acting on Alliance-specific assumptions, especially for:
 This skill is broad by design. If the task touches Alliance HPC infrastructure,
 software, docs, or cluster operations and the answer may depend on current local
 documentation, query the API first.
+
+A good pattern is: docs for guidance, local commands and other alliance skills for reality.
 
 ## POST /query
 
@@ -75,16 +81,23 @@ inventing details.
 
 - Query before making Alliance-specific assumptions.
 - Prefer current docs over training data for local cluster behaviour.
+- Prefer live local inspection over docs for environment state. If the agent has
+  shell access to an Alliance cluster, check the local system directly for things
+  like available CVMFS software, loaded modules, Slurm partitions, GPU/GRES names,
+  accounts, QOS, queues, files, paths, and mounted storage.
+- Use specialized Alliance skills before generating operational commands. For
+  software/module work, consult `alliance-cvmfs`. For Slurm job submission,
+  scheduling, GPU requests, and job scripts, consult `alliance-slurm`.
 - Prefer high-similarity chunks and cross-check broad, operational, or
   policy-related topics.
 - Do not invent cluster names, node specs, GPU types, module versions, quotas,
-  policies, command flags, or account procedures.
-- When another Alliance skill handles the hands-on workflow, use this skill to
-  confirm current docs and then apply the specialized skill.
+  policies, command flags, account procedures, or local paths.
+- Use this docs skill as the documentation lookup layer, not as a replacement for
+  local discovery or specialized workflow skills.
 
 ## Related skills
 
-Use `alliance-software` for hands-on CVMFS, Lmod, `module spider`, software
+Use `alliance-cvmfs` for hands-on CVMFS, Lmod, `module spider`, software
 loading, and Python virtual environment setup.
 
 Use `alliance-slurm` for Slurm job submission, job scripts, GPU/GRES discovery,
