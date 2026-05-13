@@ -3,6 +3,56 @@
 # drac-agent-skills
 Skills and rules for AI coding agents (Claude Code, Cursor, Continue) tailored to the Digital Research Alliance of Canada's HPC environment.
 
+Skills give AI coding agents specialized knowledge about Alliance HPC systems — how to discover and load software via CVMFS/Lmod, submit Slurm jobs that actually work, and look up cluster policies from current documentation. Instead of guessing module versions, GPU types, or partition names (and getting them wrong), the agent follows the same discovery workflow a human would.
+
+---
+
+## 📦 Skills
+
+| Skill | What it does |
+|---|---|
+| `alliance-cvmfs` | Software discovery and loading. `module spider`, Lmod tier hierarchy, Python venvs, the cluster wheelhouse, Apptainer containers. |
+| `alliance-slurm` | Job submission and monitoring. GPU/GRES discovery, MIG and soft-MIG, Lua auto-routing, proxy/cache rules, job script templates. |
+| `alliance-docs` | Documentation lookup. Queries the Alliance docs RAG API for current policies on storage, accounts, quotas, Globus, cloud, and cluster-specific behaviour. |
+
+Each skill includes `when_to_use` triggers so the agent loads it automatically at the right time — you don't need to invoke them manually.
+
+---
+
+## 🚀 Installation
+
+Skills are **markdown files** — drop them into the skills directory for your agent.
+
+### Claude Code
+
+```bash
+git clone https://github.com/ualberta-rcg/drac-agent-skills.git
+cp -r drac-agent-skills/skills/* ~/.claude/skills/
+```
+
+### Cursor (CLI / Agent)
+
+```bash
+git clone https://github.com/ualberta-rcg/drac-agent-skills.git
+cp -r drac-agent-skills/skills/* ~/.cursor/skills/
+```
+
+### Continue (VS Code / JetBrains)
+
+```bash
+git clone https://github.com/ualberta-rcg/drac-agent-skills.git
+cp -r drac-agent-skills/skills/* ~/.continue/skills/
+```
+
+### Hermes
+
+Hermes picks up skills from this repo directly — point your Hermes config at `ualberta-rcg/drac-agent-skills` and it will sync the latest skill definitions for all connected agents.
+
+### Other agents
+
+Any agent that supports Claude Code-style skill files (`SKILL.md` with YAML frontmatter) can use these. The convention is `<skills-dir>/<skill-name>/SKILL.md`. Copy the `skills/` directory to wherever your agent looks for skills.
+
+---
 
 ## 🤝 Support
 
