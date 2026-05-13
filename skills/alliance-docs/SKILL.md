@@ -1,13 +1,18 @@
 ---
 name: alliance-docs
 description: >-
-  Query the Alliance (DRAC) HPC docs RAG API before acting on Alliance-specific
-  HPC workflows, tools, software, Slurm, storage, accounts, cloud, cluster
-  behaviour, or local site guides. Use it to check current documentation that
-  may be newer than the model's training data. When available, combine this with
-  local system inspection and the relevant specialized Alliance skills, such as
-  `alliance-cvmfs` for CVMFS/Lmod/software work and `alliance-slurm` for job
-  submission, scheduling, GPU requests, and Slurm troubleshooting.
+  Query the Alliance (DRAC) HPC docs RAG API for current documentation on
+  clusters, software, Slurm, storage, accounts, cloud, and local site guides.
+  Use `alliance-cvmfs` for software/module work and `alliance-slurm` for job
+  submission.
+when_to_use: >
+  User asks about cluster policies, storage quotas, filesystem purge rules,
+  account setup, CCDB/RAC/RAS, Globus transfer, OpenStack/cloud, or any
+  Alliance-specific procedure, policy, or guide. Trigger this before answering
+  questions that training data may get wrong — quotas, limits, account rules,
+  and cluster-specific behaviour change often.
+allowed-tools:
+  - Bash(curl *)
 ---
 
 # Alliance Docs RAG API

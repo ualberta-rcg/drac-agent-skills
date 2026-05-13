@@ -1,6 +1,27 @@
 ---
 name: alliance-slurm
-description: "Submit, monitor, and troubleshoot Slurm jobs on Alliance (DRAC) HPC clusters. Use for job scripts, `sbatch`, `salloc`, `srun`, queue status, accounting, accounts, QOS, fairshare, partitions, GPUs, MIG, soft-MIG, `$SLURM_TMPDIR`, and job failures. Covers Alliance-specific Lua auto-routing, GPU/GRES discovery, GP cluster restrictions, proxied egress, cache redirection, and storage rules. Use `alliance-software` for CVMFS, Lmod, modules, and software loading."
+description: "Submit, monitor, and troubleshoot Slurm jobs on Alliance (DRAC) HPC clusters. Covers Lua auto-routing, GPU/GRES discovery, MIG and soft-MIG, prolog-injected environment, proxy, cache redirection, and storage rules. Use `alliance-cvmfs` for software and modules, `alliance-docs` for cluster policies."
+when_to_use: >
+  Trigger before ANY Slurm interaction: sbatch, srun, salloc, squeue, scancel,
+  sinfo, scontrol, sacct, seff, sprio, sshare, or sacctmgr. Also trigger when
+  the user writes a job script, requests GPUs, or debugs job failures. Alliance
+  clusters route jobs through a Lua plugin and proxy — defaults, partitions,
+  and networking differ from vanilla Slurm.
+allowed-tools:
+  - Bash(sinfo *)
+  - Bash(scontrol *)
+  - Bash(sacctmgr *)
+  - Bash(sshare *)
+  - Bash(sbatch *)
+  - Bash(srun *)
+  - Bash(salloc *)
+  - Bash(squeue *)
+  - Bash(seff *)
+  - Bash(sattach *)
+  - Bash(sacct *)
+  - Bash(sprio *)
+  - Bash(scancel *)
+  - Bash(module *)
 ---
 
 # Alliance (DRAC) Slurm
@@ -8,6 +29,8 @@ description: "Submit, monitor, and troubleshoot Slurm jobs on Alliance (DRAC) HP
 Alliance clusters run Slurm with a custom Lua submission layer that auto-routes jobs
 and a prolog that injects environment variables. Hardware varies by cluster — always
 discover before assuming. Auth is managed via CCDB; software modules come from CVMFS.
+
+For cluster policies, storage quotas, and account questions, check `alliance-docs` first.
 
 ## Discovery — never hardcode, always list
 
@@ -141,13 +164,14 @@ XDG_CACHE_HOME=$SLURM_TMPDIR/cache
 Override cache paths in every job that downloads models or large assets:
 
 ```bash
-export HF_HOME=/scratch/$USER/hf_cache
-export TRANSFORMERS_CACHE=/scratch/$USER/hf_cache
-export XDG_CACHE_HOME=/scratch/$USER/cache
+export HF_HOME=$SCRATCH/hf_cache
+export TRANSFORMERS_CACHE=$SCRATCH/hf_cache
+export XDG_CACHE_HOME=$SCRATCH/cache
 ```
 
-`$SLURM_TMPDIR` is wiped at job end — do not use `/tmp` directly, it is not guaranteed
-across clusters. Use `https://` git URLs — SSH git / arbitrary TCP may be blocked by the proxy.
+`$SLURM_TMPDIR` is wiped at job end. Do not use `/tmp` directly — its path varies by cluster (`/localscratch` on most, `/tmp` on Vulcan).
+
+On most clusters, compute nodes route HTTP/HTTPS through the squid proxy and have no direct internet access. Login nodes have full internet. Use `https://` git URLs in jobs — SSH git and arbitrary TCP may be blocked.
 
 ## Storage
 
@@ -178,11 +202,12 @@ sprio -u $USER && sshare -U              # priority and fairshare
 #SBATCH --time=4:00:00
 #SBATCH --output=%x_%j.out
 
-export HF_HOME=/scratch/$USER/hf_cache
-export XDG_CACHE_HOME=/scratch/$USER/cache
+export HF_HOME=$SCRATCH/hf_cache
+export XDG_CACHE_HOME=$SCRATCH/cache
 
+module --force purge
 module load StdEnv/2023 cuda/12.x python/3.x
-source ~/venvs/myenv/bin/activate
+source $SCRATCH/venvs/myenv/bin/activate
 python train.py
 ```
 

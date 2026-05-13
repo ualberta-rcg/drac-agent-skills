@@ -1,6 +1,23 @@
 ---
 name: alliance-cvmfs
-description: "Find, load, and use software on Alliance (DRAC) HPC clusters with Lmod and CVMFS. Look here first for available software before suggesting manual installs, source builds, or external downloads. Covers CVMFS-backed software discovery, `module spider`, prerequisite load chains, Lmod tier visibility, and Python virtual environments. Use `alliance-slurm` for job submission and Slurm scripts."
+description: "Find, load, and use software on Alliance (DRAC) HPC clusters with Lmod and CVMFS. Covers `module spider` discovery, Lmod tier hierarchy, Python virtual environments, the cluster wheelhouse, and Apptainer containers. Use `alliance-slurm` for job submission, `alliance-docs` for policies."
+when_to_use: >
+  Trigger before ANY software installation or module interaction: `module load`,
+  `module spider`, `module avail`, `pip install`, `npm install`, `python -m venv`,
+  compiling from source, or suggesting a package to install. Also trigger when
+  writing job scripts that load modules, setting up Python/CUDA/cuDNN/MPI
+  environments, creating containers, or debugging import errors. Generic
+  pip/npm advice is wrong here — CVMFS provides pre-built wheels and modules
+  that must be loaded first.
+allowed-tools:
+  - Bash(module *)
+  - Bash(python *)
+  - Bash(pip *)
+  - Bash(avail_wheels *)
+  - Bash(which *)
+  - Bash(echo *)
+  - Bash(diskusage_report *)
+  - Bash(apptainer *)
 ---
 
 # Alliance (DRAC) — CVMFS Software Stack
@@ -8,6 +25,8 @@ description: "Find, load, and use software on Alliance (DRAC) HPC clusters with 
 Software on Alliance clusters is served from **CVMFS** (read-only, network-mounted)
 and accessed entirely through **Lmod** (`module` command). Login and compute nodes see
 the same stack.
+
+For cluster policies, storage limits, and account questions, check `alliance-docs` first.
 
 ```
 /cvmfs/soft.computecanada.ca         # Alliance software stack
@@ -90,10 +109,9 @@ nvcc --version
 $SCRATCH        → /scratch/$USER  (always set)
 $CC_CLUSTER     → cluster name    (always set)
 $PROJECT        → default RAC project directory (set when a project is allocated)
-$LOCAL_SCRATCH  → $SLURM_TMPDIR  (set inside jobs only)
 ```
 
-Use `$SCRATCH` and `$PROJECT` instead of hardcoded paths.
+Use `$SCRATCH` (and `$PROJECT` when a project is allocated) instead of hardcoded paths.
 To check the current StdEnv or find alternatives: `module spider StdEnv`.
 
 ---
@@ -129,15 +147,14 @@ scipy, pandas, matplotlib, etc. Find versions: `module spider scipy-stack`.
 
 ## Python virtual environments
 
-Use `virtualenv` against the module-provided Python. Do not use conda from CVMFS —
-it conflicts with the module hierarchy.
+Create virtual environments with `python -m venv` after loading the Python module.
 
 ```bash
 # 1. Load the exact stack the venv should target
 module load StdEnv/2023 gcc/<ver> cuda/<ver> python/<ver>
 
 # 2. Create and activate
-virtualenv --no-download $SCRATCH/venvs/myenv
+python -m venv $SCRATCH/venvs/myenv
 source $SCRATCH/venvs/myenv/bin/activate
 
 # 3. Check what's available in the wheelhouse before installing
@@ -235,12 +252,12 @@ module --force purge
 module save mystack && module restore mystack
 
 # Venv
-virtualenv --no-download $SCRATCH/venvs/<name>
+python -m venv $SCRATCH/venvs/<name>
 source $SCRATCH/venvs/<name>/bin/activate
 avail_wheels <package>               # check wheelhouse first; load python/<ver> first
 pip install --no-index <package>     # drop --no-index if not in wheelhouse
 
 # Storage
 diskusage_report
-echo $SCRATCH $PROJECT $CC_CLUSTER
+echo $SCRATCH $PROJECT $CC_CLUSTER     # scratch path, project dir (if allocated), cluster name
 ```
