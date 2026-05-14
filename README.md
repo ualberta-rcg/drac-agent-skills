@@ -1,6 +1,6 @@
 <img src="./assets/ua_logo_green_rgb.png" alt="University of Alberta Logo" width="50%" />
 
-# drac-agent-skills
+# Alliance Cluster Skills & Guardrails 
 Skills and rules for AI coding agents (Claude Code, Cursor, Continue) tailored to the Digital Research Alliance of Canada's HPC environment.
 
 Skills give AI coding agents specialized knowledge about Alliance HPC systems — how to discover and load software via CVMFS/Lmod, submit Slurm jobs that actually work, and look up cluster policies from current documentation. Instead of guessing module versions, GPU types, or partition names (and getting them wrong), the agent follows the same discovery workflow a human would.
