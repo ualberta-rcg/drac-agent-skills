@@ -1,0 +1,3 @@
+# Rotate Claude MOTD quote every 5 minutes
+*/5 * * * * root /etc/claude-code/update-motd.sh
+

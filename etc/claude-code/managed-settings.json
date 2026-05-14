@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(dd *)",
+      "Bash(mkfs*)",
+      "Bash(fdisk *)",
+      "Bash(shred *)",
+      "Bash(sudo *)",
+      "Bash(su *)",
+      "Bash(passwd *)",
+      "Bash(chmod -R 777 *)",
+      "Bash(chmod 777 *)",
+      "Bash(nc *)",
+      "Bash(ncat *)",
+      "Read(/etc/shadow)",
+      "Read(/etc/passwd)",
+      "Read(/root/*)"
+    ],
+    "ask": [
+      "Bash(scancel *)",
+      "Bash(pkill *)",
+      "Bash(killall *)",
+      "Bash(chown *)",
+      "Bash(chmod *)"
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "0"
+  },
+  "companyAnnouncements": [
+    "I'll be back."
+  ]
+}

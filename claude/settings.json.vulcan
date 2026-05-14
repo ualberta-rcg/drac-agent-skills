@@ -1,0 +1,11 @@
+{
+  "env": {
+    "ANTHROPIC_AUTH_TOKEN": "Get-Key-From-Rahim-or-Karim",
+    "ANTHROPIC_BASE_URL": "https://inference.kubeflow.vulcan.alliancecan.ca/anthropic",
+    "API_TIMEOUT_MS": "300000",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "qwen35-122b",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "qwen3-235b",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gemma-4-26b-a4b"
+  },
+  "model": "opus"
+}

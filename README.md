@@ -19,6 +19,61 @@ Each skill includes `when_to_use` triggers so the agent loads it automatically a
 
 ---
 
+## ⚙️ Agent Configs (`claude/`)
+
+Pre-built Claude Code settings files for different LLM backends. Each one points at a different API and model lineup — swap them by copying the one you want to `~/.claude/settings.json`.
+
+| File | Backend | Models |
+|---|---|---|
+| `settings.json.deepseek` | [DeepSeek API](https://platform.deepseek.com/) | `deepseek-v4-pro` (opus), `deepseek-v4-flash` (sonnet/haiku) |
+| `settings.json.vulcan` | Vulcan (on-cluster Kubeflow inference) | `qwen35-122b` (opus), `qwen3-235b` (sonnet), `gemma-4-26b-a4b` (haiku) |
+| `settings.json.zai` | [Z.AI (GLM)](https://z.ai/) | `glm-5.1` (opus), `glm-4.7` (sonnet), `glm-4.5-air` (haiku) |
+
+Each file sets `ANTHROPIC_BASE_URL`, the model mappings, and a timeout. Tokens are placeholders — fill in your own key. For Vulcan, ask Rahim or Karim for the token.
+
+```bash
+# Switch to DeepSeek
+cp claude/settings.json.deepseek ~/.claude/settings.json
+
+# Switch to Vulcan (on-cluster)
+cp claude/settings.json.vulcan ~/.claude/settings.json
+
+# Switch to Z.AI
+cp claude/settings.json.zai ~/.claude/settings.json
+```
+
+---
+
+## 🏛️ Organization Policies (`etc/`)
+
+System-level configs that ship to `/etc/claude-code/` and `/etc/cron.d/` for managed, multi-user deployments. These enforce cluster-wide rules and keep things fun.
+
+| File | Purpose |
+|---|---|
+| `etc/claude-code/CLAUDE.md` | Organization-level policy injected into every Claude Code session. Teaches the agent about Vulcan's Slurm setup, storage quotas, and login-node rules so it doesn't do dumb things. |
+| `etc/claude-code/managed-settings.json` | Managed (admin-locked) settings. Blocks dangerous commands (`rm -rf`, `dd`, `mkfs`, `sudo`, etc.), requires confirmation for `scancel`/`chmod`/`chown`, and disables telemetry. |
+| `etc/claude-code/update-motd.sh` | Rotates the `companyAnnouncements` banner through sci-fi quotes every 5 minutes. Keeps the MOTD fresh with lines from HAL 9000, Star Wars, The Matrix, Hitchhiker's Guide, and more. |
+| `etc/cron.d/claude-motd` | Cron job that fires `update-motd.sh` every 5 minutes. |
+
+### Deploying org policies
+
+```bash
+# System-level Claude Code policy (one-time setup)
+sudo mkdir -p /etc/claude-code
+sudo cp etc/claude-code/CLAUDE.md /etc/claude-code/
+sudo cp etc/claude-code/managed-settings.json /etc/claude-code/
+sudo cp etc/claude-code/update-motd.sh /etc/claude-code/
+sudo chmod +x /etc/claude-code/update-motd.sh
+
+# MOTD rotator cron job
+sudo cp etc/cron.d/claude-motd /etc/cron.d/
+sudo systemctl restart cronie   # or crond, depending on distro
+```
+
+Managed settings are **locked** — users can't override them in their own `settings.json`. Use this to enforce safety rules across a shared cluster. The MOTD script needs `python3` and write access to `/etc/claude-code/managed-settings.json`.
+
+---
+
 ## 🚀 Installation
 
 Skills are **markdown files** — drop them into the skills directory for your agent.
@@ -51,6 +106,14 @@ Hermes picks up skills from this repo directly — point your Hermes config at `
 ### Other agents
 
 Any agent that supports Claude Code-style skill files (`SKILL.md` with YAML frontmatter) can use these. The convention is `<skills-dir>/<skill-name>/SKILL.md`. Copy the `skills/` directory to wherever your agent looks for skills.
+
+### Agent configs (Claude Code)
+
+The `claude/` directory has pre-built `settings.json` files for different LLM backends. Pick one and copy it to `~/.claude/settings.json`. See [Agent Configs](#-agent-configs-claude) above for the available backends.
+
+### Org policies (system-wide)
+
+For admins deploying to a shared cluster — the `etc/` directory has system-level CLAUDE.md, managed settings, and an MOTD rotator. See [Organization Policies](#-organization-policies-etc) above for setup instructions.
 
 ---
 
