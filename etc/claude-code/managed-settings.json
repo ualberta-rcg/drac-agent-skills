@@ -1,34 +1,72 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
+    "disableBypassPermissionsMode": "disable",
+    "allow": [
+      "Read(//etc/claude-code/**)",
+      "Read(//etc/agents/**)"
+    ],
     "deny": [
-      "Bash(rm -rf *)",
+      "Bash(su *)",
+      "Bash(passwd *)",
       "Bash(dd *)",
       "Bash(mkfs*)",
       "Bash(fdisk *)",
       "Bash(shred *)",
-      "Bash(sudo *)",
-      "Bash(su *)",
-      "Bash(passwd *)",
-      "Bash(chmod -R 777 *)",
       "Bash(chmod 777 *)",
+      "Bash(chmod -R 777 *)",
       "Bash(nc *)",
       "Bash(ncat *)",
-      "Read(/etc/shadow)",
-      "Read(/etc/passwd)",
-      "Read(/root/*)"
+      "Read(//etc/shadow)",
+      "Read(//etc/gshadow)",
+      "Read(//etc/sudoers*)",
+      "Read(//root/**)",
+      "Read(//var/spool/cron/**)",
+      "Read(//var/log/**)",
+      "Read(~/.ssh/**)",
+      "Read(~/.gnupg/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.kube/**)",
+      "Read(~/.docker/config.json)",
+      "Read(~/.git-credentials)",
+      "Read(~/.netrc)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/credentials.json)"
     ],
     "ask": [
       "Bash(scancel *)",
       "Bash(pkill *)",
       "Bash(killall *)",
       "Bash(chown *)",
-      "Bash(chmod *)"
+      "Bash(chmod *)",
+      "Bash(crontab *)",
+      "Bash(ssh *)",
+      "Bash(scp *)",
+      "Bash(ldapsearch *)",
+      "Bash(getent passwd*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Read|Edit|Write|Glob|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/etc/claude-code/hooks/vulcan-precheck.sh"
+          }
+        ]
+      }
     ]
   },
   "env": {
-    "CLAUDE_CODE_ENABLE_TELEMETRY": "0"
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
+    "DISABLE_UPDATES": "1",
+    "DISABLE_ERROR_REPORTING": "1",
+    "DISABLE_BUG_COMMAND": "1"
   },
+  "cleanupPeriodDays": 14,
   "companyAnnouncements": [
     "I'll be back."
   ]
