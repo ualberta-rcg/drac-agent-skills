@@ -1,4 +1,7 @@
 #!/bin/bash
+# Rewrites companyAnnouncements in managed-settings.json with the Vulcan
+# banner and a randomly chosen sci-fi quote. Run from cron (see
+# /etc/cron.d/claude-motd); the quote changes on every run.
 
 SETTINGS=/etc/claude-code/managed-settings.json
 TMPFILE=$(mktemp)
@@ -30,7 +33,7 @@ messages=(
   "I'll be back."
   "Come with me if you want to live."
   "The truth is out there."
-  "I want to believe." 
+  "I want to believe."
   "Michael, that is not advisable."
   "There are no strings on me."
   "You have twenty seconds to comply."
@@ -52,17 +55,55 @@ messages=(
 
 quote="${messages[$RANDOM % ${#messages[@]}]}"
 
-# Use python to safely update the JSON
-python3 - << PYEOF
-import json
+# Banner is passed via env so the quote text can't break the JSON.
+QUOTE="$quote" TMPFILE="$TMPFILE" python3 - << 'PYEOF'
+import json, os
 
-with open('$SETTINGS') as f:
+settings_path = '/etc/claude-code/managed-settings.json'
+tmp_path = os.environ['TMPFILE']
+quote = os.environ['QUOTE']
+
+# ANSI styling -- Claude Code's TUI renders SGR escape codes in
+# companyAnnouncements (verified empirically). No box-drawing, no
+# unicode symbols: they render as squares in some terminal fonts.
+R = "\x1b[0m"        # reset
+B = "\x1b[1m"        # bold
+D = "\x1b[2m"        # dim
+I = "\x1b[3m"        # italic
+CYAN = "\x1b[36m"
+YELLOW = "\x1b[33m"
+MAGENTA = "\x1b[35m"
+
+# No manual line wrapping -- each paragraph is one line, the TUI wraps to
+# terminal width. Avoid symbol glyphs with poor font coverage (\u26a0, \u2727,
+# etc. render as squares on some clients); widely-covered punctuation like
+# \u00b7 and \u2014 is fine. Keep the empty line before the quote.
+banner = [
+    f"{B}{CYAN}VULCAN{R}  {D}Claude Code \u00b7 University of Alberta \u00b7 Amii \u00b7 the Alliance{R}",
+    "",
+    f"{B}{YELLOW}This is a shared cluster, not your personal Claude Code setup.{R} Site-managed settings, skills, and guardrails are active here. Everything the agent does runs under your account, and your actions remain your responsibility.",
+    "",
+    f"{B}{YELLOW}What we expect of you:{R}",
+    f"{B}Review every command{R} the agent proposes before approving it. You own what it runs.",
+    f"{B}Keep compute off the login node.{R} Have the agent submit work through Slurm (sbatch/salloc), never run it here.",
+    f"{B}Protect your data.{R} Prompts, files, and command output may leave the cluster to the AI provider. Keep credentials, PII, and restricted or unpublished research data out unless you are authorized.",
+    f"{B}Respect other users.{R} Stay out of other people's /home, /scratch, and /project. Do not enumerate users or collect their information.",
+    f"{B}Mind your storage.{R} Job I/O belongs on $SCRATCH, not $HOME. Scratch is temporary -- idle files are rotated out without warning.",
+    "",
+    f"{D}Support: rschsppt+vulcan@ualberta.ca \u00b7 support@alliancecan.ca{R}",
+    f"{D}Docs: docs.alliancecan.ca \u00b7 docs.engineering.amii.ca \u00b7 OnDemand: vulcan.alliancecan.ca{R}",
+    "",
+    f"{I}{MAGENTA}{quote}{R}",
+]
+
+with open(settings_path) as f:
     settings = json.load(f)
 
-settings['companyAnnouncements'] = ["$quote"]
+settings['companyAnnouncements'] = ["\n".join(banner)]
 
-with open('$TMPFILE', 'w') as f:
+with open(tmp_path, 'w') as f:
     json.dump(settings, f, indent=2)
+    f.write("\n")
 PYEOF
 
 # Atomic replace
