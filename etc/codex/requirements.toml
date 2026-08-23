@@ -1,0 +1,9 @@
+# Admin-enforced requirements for Codex CLI on Vulcan login nodes.
+# Users cannot override these; conflicting local config falls back to a
+# compatible value. Docs: developers.openai.com/codex/enterprise/managed-configuration
+
+# Never allow the unsandboxed mode on a shared login node.
+allowed_sandbox_modes = ["read-only", "workspace-write"]
+
+# Always keep a human in the approval loop.
+allowed_approval_policies = ["untrusted", "on-request"]

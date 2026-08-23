@@ -1,0 +1,104 @@
+---
+# 93-ai-agents.yaml — install the AI coding agents on a Warewulf login node.
+#
+# Runs locally at node boot (overlay drops this file in with the other
+# numbered playbooks). Installing the agents is the ONLY thing this playbook
+# does. All configuration, policies, skills, hooks, and cron files are
+# separate overlay content and are never touched here.
+#
+# Install methods (apt first, no npm):
+#   claude-code : Anthropic's signed apt repository
+#   codex       : pinned release binary (no apt repo exists)
+#   antigravity : official installer script into /usr/local/bin (no apt repo exists)
+#   opencode    : pinned release binary (no apt repo exists)
+
+- name: Install AI coding agents
+  hosts: localhost
+  connection: local
+  become: true
+
+  vars:
+    codex_version: "0.149.0"
+    codex_url: "https://github.com/openai/codex/releases/download/rust-v{{ codex_version }}/codex-x86_64-unknown-linux-musl.tar.gz"
+    opencode_version: "1.18.21"
+    opencode_url: "https://github.com/anomalyco/opencode/releases/download/v{{ opencode_version }}/opencode-linux-x64.tar.gz"
+
+  tasks:
+    # --- Claude Code (apt) ---
+
+    - name: Install prerequisites
+      ansible.builtin.apt:
+        name:
+          - curl
+          - gnupg
+        state: present
+        update_cache: true
+      environment:
+        TMPDIR: /var/tmp
+
+    - name: Create apt keyring directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Fetch the Claude Code signing key
+      ansible.builtin.get_url:
+        url: https://downloads.claude.ai/keys/claude-code.asc
+        dest: /etc/apt/keyrings/claude-code.asc
+        mode: "0644"
+
+    - name: Add the Claude Code apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/stable stable main"
+        filename: claude-code
+        state: present
+
+    - name: Install Claude Code
+      ansible.builtin.apt:
+        name: claude-code
+        state: present
+        update_cache: true
+      environment:
+        TMPDIR: /var/tmp
+
+    # --- Codex (pinned release binary) ---
+
+    - name: Install Codex CLI
+      ansible.builtin.unarchive:
+        src: "{{ codex_url }}"
+        dest: /usr/local/bin
+        remote_src: true
+        mode: "0755"
+        creates: /usr/local/bin/codex-x86_64-unknown-linux-musl
+
+    - name: Symlink codex into PATH
+      ansible.builtin.file:
+        src: /usr/local/bin/codex-x86_64-unknown-linux-musl
+        dest: /usr/local/bin/codex
+        state: link
+
+    # --- Antigravity CLI (official installer, system-wide dir) ---
+
+    - name: Fetch the Antigravity CLI installer
+      ansible.builtin.get_url:
+        url: https://antigravity.google/cli/install.sh
+        dest: /var/tmp/agy-install.sh
+        mode: "0755"
+
+    - name: Install Antigravity CLI
+      ansible.builtin.command:
+        cmd: /bin/bash /var/tmp/agy-install.sh -d /usr/local/bin
+        creates: /usr/local/bin/agy
+      environment:
+        TMPDIR: /var/tmp
+
+    # --- opencode (pinned release binary) ---
+
+    - name: Install opencode
+      ansible.builtin.unarchive:
+        src: "{{ opencode_url }}"
+        dest: /usr/local/bin
+        remote_src: true
+        mode: "0755"
+        creates: /usr/local/bin/opencode

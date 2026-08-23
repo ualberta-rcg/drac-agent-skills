@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "autoupdate": false,
+  "instructions": ["/etc/agents/AGENTS.md"],
+  "permission": {
+    "bash": {
+      "su *": "deny",
+      "su": "deny",
+      "passwd *": "deny",
+      "dd *": "deny",
+      "mkfs*": "deny",
+      "fdisk *": "deny",
+      "shred *": "deny",
+      "scancel *": "ask",
+      "pkill *": "ask",
+      "killall *": "ask",
+      "crontab *": "ask",
+      "ssh *": "ask",
+      "scp *": "ask",
+      "chown *": "ask",
+      "chmod *": "ask"
+    }
+  }
+}

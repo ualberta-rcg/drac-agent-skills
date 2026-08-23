@@ -1,0 +1,33 @@
+# Admin-tier policy for Gemini CLI on Vulcan login nodes.
+# Admin rules override user and workspace policies.
+# Docs: gemini-cli docs/reference/policy-engine.md
+
+# --- Hard denies: privilege escalation and destructive system commands ---
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = ["su ", "passwd", "dd ", "mkfs", "fdisk", "shred"]
+decision = "deny"
+priority = 900
+
+# --- Hard denies: credential and PII harvesting ---
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "(/etc/shadow|/etc/gshadow|/etc/sudoers|\\.ssh/id_|\\.aws/credentials|\\.git-credentials|\\.netrc)"
+decision = "deny"
+priority = 890
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = ["ldapsearch", "getent passwd"]
+decision = "ask_user"
+priority = 880
+
+# --- Ask before actions that affect jobs, other hosts, or persistence ---
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = ["scancel", "pkill", "killall", "crontab", "ssh ", "scp ", "chown", "chmod"]
+decision = "ask_user"
+priority = 800

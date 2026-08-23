@@ -1,0 +1,10 @@
+# System-wide defaults for Codex CLI on Vulcan login nodes.
+# Users may override these in ~/.codex/config.toml, except where
+# /etc/codex/requirements.toml constrains the value.
+
+# Updates are centrally managed; don't nag users or hit GitHub on startup.
+check_for_update_on_startup = false
+
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+allow_login_shell = false
