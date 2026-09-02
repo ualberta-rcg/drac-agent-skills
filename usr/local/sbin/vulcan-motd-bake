@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# vulcan-motd-bake — root baker for the Vulcan MOTD cluster block.
+#
+# Runs the 5 expensive cluster-wide Slurm queries ONCE and writes the results
+# as a flat key=value file so vulcan-status can read it at login instead of
+# querying Slurm per login. Driven by vulcan-motd-bake.timer (every 10 min).
+#
+# Writes (atomic tmp->mv, so a failed run never clobbers a good cache):
+#   /run/vulcan-motd/cluster    nodes_up nodes_down cpu_alloc cpu_total
+#                               mem_alloc_mb mem_total_mb gpu_alloc gpu_total
+#                               queue_r queue_pd        (shell key=value, 0644)
+#   /run/vulcan-motd/heartbeat  ctld=0|1 dbd=0|1        (0644)
+#
+# Stale beats empty: every output is built in a temp file and only moved into
+# place on success. Missing/slurm-down -> old cache (if any) is left intact.
+
+set -u
+PATH=/usr/local/bin:/usr/bin:/bin
+
+CONF=/etc/vulcan-motd/motd.conf
+[ -r "$CONF" ] && . "$CONF"
+
+CACHE_DIR=${CACHE_DIR:-/run/vulcan-motd}
+CLUSTER_OUT=${CLUSTER_CACHE:-$CACHE_DIR/cluster}
+HEARTBEAT_OUT=${HEARTBEAT:-$CACHE_DIR/heartbeat}
+Q_TIMEOUT=${Q_TIMEOUT:-3}
+
+mkdir -p "$CACHE_DIR"
+# Root's umask (often 0027) would create the dir 0750, blocking normal users
+# from traversing to the 0644 cache files. Force 0755 so any user can read the
+# cluster stats (they are not sensitive — cluster-wide counts).
+chmod 0755 "$CACHE_DIR" 2>/dev/null
+
+# ----------------------------------------------------------------------------
+# Heartbeat: ctld up? (sinfo answers from slurmctld); dbd up? (scontrol show
+# node is also ctld, so probe dbd via sshare which needs slurmdbd).
+# ----------------------------------------------------------------------------
+CTLD=0; DBD=0
+if timeout "$Q_TIMEOUT" sinfo -h -o '%D' >/dev/null 2>&1; then CTLD=1; fi
+# sshare requires slurmdbd; a fast failure (rc!=0 or empty) means dbd is down.
+if timeout "$Q_TIMEOUT" sshare -ahP --noheader -o Account >/dev/null 2>&1; then DBD=1; fi
+
+# Always (re)write heartbeat atomically — health can flip either way.
+{
+  printf 'ctld=%d\n' "$CTLD"
+  printf 'dbd=%d\n'  "$DBD"
+} > "$HEARTBEAT_OUT.tmp.$$"
+mv -f "$HEARTBEAT_OUT.tmp.$$" "$HEARTBEAT_OUT" 2>/dev/null
+chmod 0644 "$HEARTBEAT_OUT" 2>/dev/null
+
+# ----------------------------------------------------------------------------
+# Cluster stats. Only meaningful if ctld is up; if it's down, leave the prior
+# cluster cache untouched and exit (stale beats empty).
+# ----------------------------------------------------------------------------
+[ "$CTLD" = 1 ] || exit 0
+
+nodes_up=0 nodes_down=0 cpu_alloc=0 cpu_total=0
+mem_alloc_mb=0 mem_total_mb=0 gpu_alloc=0 gpu_total=0 gpu_usable=0
+queue_r=0 queue_pd=0
+
+s=$(timeout "$Q_TIMEOUT" sinfo -h -o '%D %t' 2>/dev/null)
+if [ -n "$s" ]; then
+    eval "$(printf '%s\n' "$s" | awk '
+        { tot=$1; if ($2 ~ /^(down|drain|drng|drng@|drain@|unk|fail|maint|resv)/) d+=tot; else u+=tot }
+        END { printf "nodes_up=%d nodes_down=%d\n", u, d }')"
+fi
+
+s=$(timeout "$Q_TIMEOUT" sinfo -h -o '%C' 2>/dev/null) && [ -n "$s" ] && \
+    eval "$(printf '%s' "$s" | awk -F/ '{ printf "cpu_alloc=%d cpu_total=%d\n", $1, $4 }')"
+
+s=$(timeout $((Q_TIMEOUT*2)) scontrol -o show nodes 2>/dev/null) && [ -n "$s" ] && \
+    eval "$(printf '%s\n' "$s" | awk '
+        { nrm=nam=cc=ac=cg=ag=0
+          for (i=1; i<=NF; i++) {
+              if ($i ~ /^RealMemory=/) { split($i,a,"="); nrm=a[2] }
+              if ($i ~ /^AllocMem=/)    { split($i,a,"="); nam=a[2] }
+              if ($i ~ /^CfgTRES=/)     { if (match($i, /gres\/gpu=[0-9]+/)) { g=substr($i,RSTART+9,RLENGTH-9)+0; gt+=g; cg=g }
+                                          if (match($i, /cpu=[0-9]+/))      cc=substr($i,RSTART+4,RLENGTH-4)+0 }
+              if ($i ~ /^AllocTRES=/)   { if (match($i, /gres\/gpu=[0-9]+/)) { g=substr($i,RSTART+9,RLENGTH-9)+0; ga+=g; ag=g }
+                                          if (match($i, /cpu=[0-9]+/))      ac=substr($i,RSTART+4,RLENGTH-4)+0 } }
+          trm+=nrm; tam+=nam
+          # gpu_usable: a free GPU is only USABLE if its node also has the
+          # GPU-proportional share of CPU and memory free (a GPU on a host
+          # out of CPU/RAM is idle but not schedulable).
+          if (cg > 0) {
+              cpu_per = cc/cg; mem_per = (nrm>0 ? nrm/cg : 0)
+              u = cg - ag
+              v = (cpu_per>0 ? int((cc-ac)/cpu_per) : 0)
+              w = (mem_per>0 ? int((nrm-nam)/mem_per) : 0)
+              if (v < u) u=v; if (w < u) u=w
+              if (u > 0) usable += u } }
+        END { printf "mem_alloc_mb=%d mem_total_mb=%d gpu_alloc=%d gpu_total=%d gpu_usable=%d\n", tam, trm, ga, gt, usable+0 }')"
+
+queue_r=$(timeout "$Q_TIMEOUT" squeue -h -t R  2>/dev/null | wc -l)
+queue_pd=$(timeout "$Q_TIMEOUT" squeue -h -t PD 2>/dev/null | wc -l)
+
+# Atomic write of the cluster cache.
+{
+    printf 'nodes_up=%d\n'      "$nodes_up"
+    printf 'nodes_down=%d\n'    "$nodes_down"
+    printf 'cpu_alloc=%d\n'     "$cpu_alloc"
+    printf 'cpu_total=%d\n'     "$cpu_total"
+    printf 'mem_alloc_mb=%d\n'  "$mem_alloc_mb"
+    printf 'mem_total_mb=%d\n'  "$mem_total_mb"
+    printf 'gpu_alloc=%d\n'     "$gpu_alloc"
+    printf 'gpu_total=%d\n'     "$gpu_total"
+    printf 'gpu_usable=%d\n'    "$gpu_usable"
+    printf 'queue_r=%d\n'       "$queue_r"
+    printf 'queue_pd=%d\n'      "$queue_pd"
+    printf 'baked_epoch=%d\n'   "$(date +%s)"
+} > "$CLUSTER_OUT.tmp.$$"
+mv -f "$CLUSTER_OUT.tmp.$$" "$CLUSTER_OUT" 2>/dev/null
+chmod 0644 "$CLUSTER_OUT" 2>/dev/null
+
+exit 0

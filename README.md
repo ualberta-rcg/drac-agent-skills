@@ -27,7 +27,8 @@ Pre-built Claude Code settings files for different LLM backends. Each one points
 |---|---|---|
 | `settings.json.deepseek` | [DeepSeek API](https://platform.deepseek.com/) | `deepseek-v4-pro` (opus), `deepseek-v4-flash` (sonnet/haiku) |
 | `settings.json.vulcan` | Vulcan (on-cluster Kubeflow inference) | `qwen35-122b` (opus), `qwen3-235b` (sonnet), `gemma-4-26b-a4b` (haiku) |
-| `settings.json.zai` | [Z.AI (GLM)](https://z.ai/) | `glm-5.1` (opus), `glm-4.7` (sonnet), `glm-4.5-air` (haiku) |
+| `settings.json.zai` | [Z.AI (GLM)](https://z.ai/) | `glm-5.3` (opus), `glm-5.2` (sonnet), `glm-4.7` (haiku) |
+| `settings.json.kimi` | [Kimi (Moonshot)](https://www.kimi.com/) | `kimi-k3[1m]` (all tiers) |
 
 Each file sets `ANTHROPIC_BASE_URL`, the model mappings, and a timeout. Tokens are placeholders — fill in your own key. For Vulcan, ask Rahim or Karim for the token.
 
@@ -40,6 +41,9 @@ cp claude/settings.json.vulcan ~/.claude/settings.json
 
 # Switch to Z.AI
 cp claude/settings.json.zai ~/.claude/settings.json
+
+# Switch to Kimi
+cp claude/settings.json.kimi ~/.claude/settings.json
 ```
 
 ---
@@ -51,9 +55,32 @@ System-level configs that ship to `/etc/claude-code/` and `/etc/cron.d/` for man
 | File | Purpose |
 |---|---|
 | `etc/claude-code/CLAUDE.md` | Organization-level policy injected into every Claude Code session. Teaches the agent about Vulcan's Slurm setup, storage quotas, and login-node rules so it doesn't do dumb things. |
-| `etc/claude-code/managed-settings.json` | Managed (admin-locked) settings. Blocks dangerous commands (`rm -rf`, `dd`, `mkfs`, `sudo`, etc.), requires confirmation for `scancel`/`chmod`/`chown`, and disables telemetry. |
+| `etc/claude-code/managed-settings.json` | Managed (admin-locked) settings. Disables bypass mode, denies credential/PII reads, requires approval for `ssh`/`scp`/crontab/job-kill, turns off updates + telemetry + error reporting, 14-day session cleanup. |
+| `etc/claude-code/.claude/skills/` | Canonical enterprise skills source (`/etc/claude-code/.claude/skills`). Update this one tree and every agent follows. |
+| `etc/agents/skills` | Symlink → `../claude-code/.claude/skills`. Feeds Codex and the per-user skill links. |
+| `etc/agents/AGENTS.md` | Condensed shared instructions (do-nots, Slurm/module rules) for non-Claude agents. |
+| `etc/codex/{config,requirements}.toml` | Codex defaults + admin-enforced floor: workspace-write sandbox, approvals always on, no danger-full-access. |
+| `etc/codex/skills` | Symlink → `../agents/skills`. |
+| `etc/gemini-cli/` | Settings + `hpc-guardrails.toml` policy (dormant until Gemini CLI ships on the nodes). |
+| `etc/opencode/opencode.json` | Autoupdate off + permission rules. No trailing catch-all allow — rules are last-match-wins. |
+| `etc/profile.d/ai-agent-skills.sh` | Login hook: symlinks central skills into `~/.agents/skills/`, `~/.gemini/antigravity-cli/skills/`, `~/.codex/` — never clobbers existing files. |
 | `etc/claude-code/update-motd.sh` | Rotates the `companyAnnouncements` banner through sci-fi quotes every 5 minutes. Keeps the MOTD fresh with lines from HAL 9000, Star Wars, The Matrix, Hitchhiker's Guide, and more. |
 | `etc/cron.d/claude-motd` | Cron job that fires `update-motd.sh` every 5 minutes. |
+| `etc/ansible/playbooks/93-ai-agents.yaml` | Boot-time agent install only: Claude Code (apt), Codex + opencode (pinned binaries), Antigravity CLI (official installer). No config copying. |
+
+### Login status banner (`vulcan-status`)
+
+The per-user login banner stack: renderer, root cache baker, config, login hook, and systemd timer. The baker refreshes `/run/vulcan-motd/` every 10 min so `vulcan-status` never calls Slurm synchronously at login.
+
+| File | Target |
+|---|---|
+| `usr/local/bin/vulcan-status` | `/usr/local/bin/` — the renderer (fairshare tiers, LevelFS verdicts, `--help`) |
+| `usr/local/sbin/vulcan-motd-bake` | `/usr/local/sbin/` — 10-min cache baker (emits `gpu_usable`) |
+| `etc/vulcan-motd/{motd.conf,announce.txt}` | `/etc/vulcan-motd/` — tier thresholds/color bands; announcements placeholder |
+| `etc/profile.d/zz-vulcan-motd.sh` | `/etc/profile.d/` — login hook that runs the renderer |
+| `etc/systemd/system/vulcan-motd-bake.{service,timer}` | `/etc/systemd/system/` — run `systemctl enable --now vulcan-motd-bake.timer` |
+
+The renderer falls back to raw free GPUs if `gpu_usable` is absent, so old/new baker+renderer combos are safe in any order.
 
 ### Deploying org policies
 
@@ -68,6 +95,14 @@ sudo chmod +x /etc/claude-code/update-motd.sh
 # MOTD rotator cron job
 sudo cp etc/cron.d/claude-motd /etc/cron.d/
 sudo systemctl restart cronie   # or crond, depending on distro
+
+# vulcan-status login banner
+sudo cp usr/local/bin/vulcan-status /usr/local/bin/
+sudo cp usr/local/sbin/vulcan-motd-bake /usr/local/sbin/
+sudo cp -r etc/vulcan-motd /etc/
+sudo cp etc/profile.d/zz-vulcan-motd.sh /etc/profile.d/
+sudo cp etc/systemd/system/vulcan-motd-bake.* /etc/systemd/system/
+sudo systemctl enable --now vulcan-motd-bake.timer
 ```
 
 Managed settings are **locked** — users can't override them in their own `settings.json`. Use this to enforce safety rules across a shared cluster. The MOTD script needs `python3` and write access to `/etc/claude-code/managed-settings.json`.

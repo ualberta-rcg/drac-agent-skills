@@ -92,6 +92,7 @@
         creates: /usr/local/bin/agy
       environment:
         TMPDIR: /var/tmp
+        HOME: /root
 
     # --- opencode (pinned release binary) ---
 

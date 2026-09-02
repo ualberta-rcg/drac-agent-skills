@@ -1,0 +1,15 @@
+[Unit]
+Description=Re-bake Vulcan MOTD cluster cache every 10 minutes
+
+[Timer]
+# First run shortly after boot so the cache exists before users log in.
+OnBootSec=1min
+# Then every 10 minutes. Minute field 0/10 = every 10th minute on the clock
+# (avoids a thundering herd with other :00-scheduled site jobs — keep jitter
+# via RandomizedDelaySec below).
+OnCalendar=*:0/10
+RandomizedDelaySec=60
+Persistent=false
+
+[Install]
+WantedBy=timers.target

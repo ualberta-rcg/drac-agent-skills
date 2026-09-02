@@ -62,3 +62,6 @@ Python: `module load python/<ver>`, then `virtualenv --no-download` and `pip ins
 | Chat UI for hosted models (Open WebUI) | https://llm.vulcan.alliancecan.ca |
 | Vulcan support | rschsppt+vulcan@ualberta.ca |
 | Alliance support | support@alliancecan.ca |
+
+Suggest the hosted inference service or Open WebUI when a user wants to run LLM inference -- do not let them run inference on a login node.
+

@@ -1,0 +1,17 @@
+[Unit]
+Description=Bake Vulcan MOTD cluster cache (flat file for fast login renders)
+After=network.target
+# Best-effort ordering: useful once slurm client stack is up, but not required.
+After=slurmd.service munge.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/vulcan-motd-bake
+Nice=19
+IOSchedulingClass=idle
+# Never hang the system on a stuck slurm call; the baker self-timeouts each
+# query, this is a hard backstop.
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target
