@@ -72,6 +72,8 @@ System-level configs that ship to `/etc/claude-code/` and `/etc/cron.d/` for man
 
 The per-user login banner stack: renderer, root cache baker, config, login hook, and systemd timer. The baker refreshes `/run/vulcan-motd/` every 10 min so `vulcan-status` never calls Slurm synchronously at login.
 
+![vulcan-status login banner](assets/motd-example.png)
+
 | File | Target |
 |---|---|
 | `usr/local/bin/vulcan-status` | `/usr/local/bin/` — the renderer (fairshare tiers, LevelFS verdicts, `--help`) |
