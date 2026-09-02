@@ -25,13 +25,10 @@
       "Read(//var/log/**)",
       "Read(~/.ssh/**)",
       "Read(~/.gnupg/**)",
-      "Read(~/.aws/**)",
       "Read(~/.kube/**)",
       "Read(~/.docker/config.json)",
       "Read(~/.git-credentials)",
       "Read(~/.netrc)",
-      "Read(**/.env)",
-      "Read(**/.env.*)",
       "Read(**/credentials.json)"
     ],
     "ask": [
