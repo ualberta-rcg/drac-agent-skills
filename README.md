@@ -26,7 +26,7 @@ Pre-built Claude Code settings files for different LLM backends. Each one points
 | File | Backend | Models |
 |---|---|---|
 | `settings.json.deepseek` | [DeepSeek API](https://platform.deepseek.com/) | `deepseek-v4-pro` (opus), `deepseek-v4-flash` (sonnet/haiku) |
-| `settings.json.vulcan` | Vulcan (on-cluster Kubeflow inference) | `qwen35-122b` (opus), `qwen3-235b` (sonnet), `gemma-4-26b-a4b` (haiku) |
+| `settings.json.vulcan` | Vulcan (hosted Aleph inference) | `qwen35-122b` (opus), `qwen38-27b` (sonnet), `gpt-oss-120b` (haiku) |
 | `settings.json.zai` | [Z.AI (GLM)](https://z.ai/) | `glm-5.3` (opus), `glm-5.2` (sonnet), `glm-4.7` (haiku) |
 | `settings.json.kimi` | [Kimi (Moonshot)](https://www.kimi.com/) | `kimi-k3[1m]` (all tiers) |
 
