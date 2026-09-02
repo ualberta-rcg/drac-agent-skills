@@ -1,11 +1,16 @@
 {
   "env": {
-    "ANTHROPIC_AUTH_TOKEN": "Get-Key-From-Rahim-or-Karim",
-    "ANTHROPIC_BASE_URL": "https://inference.kubeflow.vulcan.alliancecan.ca/anthropic",
+    "ANTHROPIC_AUTH_TOKEN": "PutURKeyHere",
+    "ANTHROPIC_BASE_URL": "https://inference.vulcan.alliancecan.ca/anthropic",
     "API_TIMEOUT_MS": "300000",
+    "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1",
+    "CLAUDE_CODE_ATTRIBUTION_HEADER": "0",
+    "CLAUDE_CODE_ALWAYS_ENABLE_EFFORT": "1",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "110000",
     "ANTHROPIC_DEFAULT_OPUS_MODEL": "qwen35-122b",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "qwen3-235b",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gemma-4-26b-a4b"
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "qwen38-27b",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gpt-oss-120b"
   },
-  "model": "opus"
+  "model": "opus",
+  "effortLevel": "high"
 }
