@@ -147,6 +147,13 @@ hint() { # hint CMD — dim "for more detail" line at the foot of a block
     c '38;5;252'; printf '  %s Want more detail? Run: %s\n' "$HINT_ARROW" "$1"; c '0'
 }
 
+# Strip control characters from Slurm-derived strings before printing.
+# Job names, pending reasons, TRES strings, account and project names are
+# user-controllable; unfiltered they can inject ANSI/OSC terminal escape
+# sequences into whatever terminal renders this banner (internal security
+# finding — sanitize at the output boundary, before any truncation).
+sanitize() { printf '%s' "$1" | LC_ALL=C tr -d '\000-\010\013\014\016-\037\177'; }
+
 # --help renders the real banner with a titled explanation section under
 # each block (blank line, bold title, plain-white body — gray was too hard
 # to read). Links get no section — they explain themselves. Text mirrors
@@ -421,6 +428,9 @@ render_jobs() {
     fi
     hdr 'Your jobs' "$(c '38;5;79')$nr running$(c '0') · $(c '38;5;214')$np pending$(c '0')"
     printf '%s\n' "$out" | head -n "$MAX_JOBS" | while IFS='|' read -r jid part name st tum tleft reason tres; do
+        jid=$(sanitize "$jid"); part=$(sanitize "$part"); name=$(sanitize "$name")
+        tum=$(sanitize "$tum"); tleft=$(sanitize "$tleft"); tres=$(sanitize "$tres")
+        reason=$(sanitize "$reason")
         part=${part%%,*}; part=${part:0:16}
         name=${name:0:$NAMEW}
         if [ "$st" = RUNNING ]; then
@@ -500,6 +510,7 @@ lfs_col() { printf '38;5;117'; }   # light sky blue for all verdicts
 
 render_fairshare_one() { # account fairshare levelfs
     local acct=$1 f=$2 lfs=${3:-} lab pct col pl ltxt lcol
+    acct=$(sanitize "$acct")
     pl=$(fs_eval "$f"); pct=${pl%%|*}; lab=${pl##*|}
     case "$lab" in
         boosted)   col='1;38;5;48' ;;   # bold turquoise — top priority
@@ -590,7 +601,7 @@ render_storage() {
         if [ "$f1" = '#' ]; then ptotal=$f2; nproj=$f3; continue; fi   # meta line
         label=$f1; used=$f2; size=$f3; p=$f4
         case "$p" in *[!0-9]*|'') continue ;; esac
-        label=${label:0:12}
+        label=$(sanitize "$label"); label=${label:0:12}
         if [ "$LAYOUT" = wide ]; then
             printf '  %-12s ' "$label"
             dbar "$p" "$BARW"
