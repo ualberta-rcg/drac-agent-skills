@@ -90,7 +90,7 @@ banner = [
     f"{B}Respect other users.{R} Stay out of other people's /home, /scratch, and /project. Do not enumerate users or collect their information.",
     f"{B}Mind your storage.{R} Job I/O belongs on $SCRATCH, not $HOME. Scratch is temporary -- idle files are rotated out without warning.",
     "",
-    f"{D}Support: rschsppt+vulcan@ualberta.ca \u00b7 support@alliancecan.ca{R}",
+    f"{D}Support: rschsppt+vulcan@ualberta.ca \u00b7 support@tech.alliancecan.ca{R}",
     f"{D}Docs: docs.alliancecan.ca \u00b7 docs.engineering.amii.ca \u00b7 OnDemand: vulcan.alliancecan.ca{R}",
     "",
     f"{I}{MAGENTA}{quote}{R}",
