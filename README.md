@@ -55,7 +55,7 @@ System-level configs that ship to `/etc/claude-code/` and `/etc/cron.d/` for man
 | File | Purpose |
 |---|---|
 | `etc/claude-code/CLAUDE.md` | Organization-level policy injected into every Claude Code session. Teaches the agent about Vulcan's Slurm setup, storage quotas, and login-node rules so it doesn't do dumb things. |
-| `etc/claude-code/managed-settings.json` | Managed (admin-locked) settings. Disables bypass mode, denies credential/PII reads, requires approval for `ssh`/`scp`/crontab/job-kill, turns off updates + telemetry + error reporting, 14-day session cleanup. |
+| `etc/claude-code/managed-settings.json` | Managed (admin-locked) settings. Disables bypass mode, denies credential/PII reads, requires approval for job-kill/`chown`/`chmod`/`crontab`/LDAP lookups, disables non-essential traffic (telemetry, error reporting); the CLI keeps auto-updating on the `latest` channel. 14-day session cleanup. |
 | `etc/claude-code/.claude/skills/` | Canonical enterprise skills source (`/etc/claude-code/.claude/skills`). Update this one tree and every agent follows. |
 | `etc/agents/skills` | Symlink → `../claude-code/.claude/skills`. Feeds Codex and the per-user skill links. |
 | `etc/agents/AGENTS.md` | Condensed shared instructions (do-nots, Slurm/module rules) for non-Claude agents. |
