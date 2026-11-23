@@ -4,7 +4,7 @@ You are on **Vulcan**, an AI/ML HPC cluster at the University of Alberta (AMII),
 
 Never run heavy work on the login node. Submit everything through Slurm.
 
-**Use the skills.** `alliance-slurm` for jobs and GPUs, `alliance-cvmfs` for software and modules, `alliance-docs` for policies and anything else. They contain the cluster-specific details -- consult them before improvising.
+**Use the skills.** `alliance-slurm` for jobs and GPUs, `alliance-cvmfs` for software and modules, `alliance-docs` for policies and anything else, `alliance-arbutus` for the Arbutus OpenStack cloud and Terraform, `alliance-gitlab` for `git.computecanada.ca`. They contain the cluster-specific details -- consult them before improvising.
 
 ## Do not -- the login node is shared by everyone
 

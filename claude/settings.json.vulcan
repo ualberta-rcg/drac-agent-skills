@@ -1,16 +1,21 @@
 {
   "env": {
-    "ANTHROPIC_AUTH_TOKEN": "PutURKeyHere",
+    "ANTHROPIC_AUTH_TOKEN": "Put-Key-Here",
     "ANTHROPIC_BASE_URL": "https://inference.vulcan.alliancecan.ca/anthropic",
-    "API_TIMEOUT_MS": "300000",
+    "API_TIMEOUT_MS": "3000000",
     "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1",
     "CLAUDE_CODE_ATTRIBUTION_HEADER": "0",
     "CLAUDE_CODE_ALWAYS_ENABLE_EFFORT": "1",
-    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "110000",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "256000",
     "ANTHROPIC_DEFAULT_OPUS_MODEL": "qwen35-122b",
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "qwen38-27b",
     "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gpt-oss-120b"
   },
-  "model": "opus",
-  "effortLevel": "high"
+  "model": "sonnet",
+  "effortLevel": "high",
+  "modelSettings": {
+    "qwen38-27b": {
+      "effortLevel": "medium"
+    }
+  }
 }

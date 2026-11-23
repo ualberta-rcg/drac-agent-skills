@@ -2,11 +2,43 @@
 # Admin rules override user and workspace policies.
 # Docs: gemini-cli docs/reference/policy-engine.md
 
-# --- Hard denies: privilege escalation and destructive system commands ---
+# --- Hard denies: privilege escalation, destructive commands, raw sockets, Slurm/node admin ---
 
 [[rule]]
 toolName = "run_shell_command"
-commandPrefix = ["su ", "passwd", "dd ", "mkfs", "fdisk", "shred"]
+commandPrefix = [
+  "su ",
+  "passwd",
+  "dd ",
+  "mkfs",
+  "fdisk",
+  "shred",
+  "chmod 777 ",
+  "chmod -R 777 ",
+  "nc ",
+  "ncat ",
+  "socat",
+  "telnet",
+  "wall",
+  "write ",
+  "scontrol show partition",
+  "scontrol reboot",
+  "scontrol update Node",
+  "scontrol update node",
+  "scontrol update Partition",
+  "scontrol update partition",
+  "sacctmgr add",
+  "sacctmgr modify",
+  "sacctmgr remove",
+  "sacctmgr create",
+  "sacctmgr delete",
+  "shutdown",
+  "reboot",
+  "init 0",
+  "crontab -r",
+  "visudo",
+  "vipw"
+]
 decision = "deny"
 priority = 900
 
@@ -14,9 +46,11 @@ priority = 900
 
 [[rule]]
 toolName = "run_shell_command"
-commandRegex = "(/etc/shadow|/etc/gshadow|/etc/sudoers|\\.ssh/id_|\\.aws/credentials|\\.git-credentials|\\.netrc)"
+commandRegex = "(/etc/shadow|/etc/gshadow|/etc/sudoers|/etc/sssd/|/root/|/var/spool/cron/|/var/log/|\\.ssh/|\\.gnupg/|\\.kube/|\\.docker/config\\.json|\\.git-credentials|\\.netrc|credentials\\.json|(^|/)\\.env(\\.|$)|\\.codex/auth\\.json|\\.pi/agent/auth\\.json)"
 decision = "deny"
 priority = 890
+
+# --- Ask before user enumeration or actions affecting jobs, permissions, or persistence ---
 
 [[rule]]
 toolName = "run_shell_command"
@@ -24,10 +58,8 @@ commandPrefix = ["ldapsearch", "getent passwd"]
 decision = "ask_user"
 priority = 880
 
-# --- Ask before actions that affect jobs, other hosts, or persistence ---
-
 [[rule]]
 toolName = "run_shell_command"
-commandPrefix = ["scancel", "pkill", "killall", "crontab", "ssh ", "scp ", "chown", "chmod"]
+commandPrefix = ["scancel", "pkill", "killall", "chown", "chmod", "crontab"]
 decision = "ask_user"
 priority = 800

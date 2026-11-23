@@ -1,0 +1,29 @@
+{
+  "providers": {
+    "vulcan": {
+      "baseUrl": "https://inference.vulcan.alliancecan.ca/v1",
+      "api": "openai-completions",
+      "apiKey": "Put-Key-Here",
+      "models": [
+        {
+          "id": "qwen35-122b",
+          "name": "Qwen 3.5 122B (Vulcan Aleph)",
+          "contextWindow": 256000,
+          "maxTokens": 32768
+        },
+        {
+          "id": "qwen38-27b",
+          "name": "Qwen 3.8 27B (Vulcan Aleph)",
+          "contextWindow": 256000,
+          "maxTokens": 32768
+        },
+        {
+          "id": "gpt-oss-120b",
+          "name": "GPT-OSS 120B (Vulcan Aleph)",
+          "contextWindow": 128000,
+          "maxTokens": 16384
+        }
+      ]
+    }
+  }
+}

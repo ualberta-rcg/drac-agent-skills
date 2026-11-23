@@ -7,3 +7,57 @@ allowed_sandbox_modes = ["read-only", "workspace-write"]
 
 # Always keep a human in the approval loop.
 allowed_approval_policies = ["untrusted", "on-request"]
+
+# Command prefix rules aligned with /etc/claude-code/managed-settings.json.
+# In requirements.toml, decisions may only be "forbidden" or "prompt".
+[rules]
+prefix_rules = [
+  # Privilege escalation & auth files
+  { pattern = [{ token = "su" }], decision = "forbidden", justification = "Switching accounts is disabled on shared login nodes." },
+  { pattern = [{ token = "passwd" }], decision = "forbidden", justification = "Password changes via agents are disabled." },
+  { pattern = [{ token = "visudo" }], decision = "forbidden", justification = "Editing sudoers is disabled." },
+  { pattern = [{ token = "vipw" }], decision = "forbidden", justification = "Editing passwd database is disabled." },
+
+  # Disk/filesystem destruction & world-writable permissions
+  { pattern = [{ token = "dd" }], decision = "forbidden", justification = "Raw block/disk writes are disabled on login nodes." },
+  { pattern = [{ token = "mkfs" }], decision = "forbidden", justification = "Filesystem formatting is disabled." },
+  { pattern = [{ token = "fdisk" }], decision = "forbidden", justification = "Partition table editing is disabled." },
+  { pattern = [{ token = "shred" }], decision = "forbidden", justification = "Destructive file wiping is disabled." },
+  { pattern = [{ token = "chmod" }, { token = "777" }], decision = "forbidden", justification = "World-writable permissions (777) are forbidden on shared storage." },
+  { pattern = [{ token = "chmod" }, { token = "-R" }, { token = "777" }], decision = "forbidden", justification = "World-writable permissions (777) are forbidden on shared storage." },
+  { pattern = [{ token = "crontab" }, { token = "-r" }], decision = "forbidden", justification = "Removing the crontab is disabled." },
+
+  # Raw sockets & shared-node messaging
+  { pattern = [{ token = "nc" }], decision = "forbidden", justification = "Raw socket listeners/clients are disabled on login nodes." },
+  { pattern = [{ token = "ncat" }], decision = "forbidden", justification = "Raw socket listeners/clients are disabled on login nodes." },
+  { pattern = [{ token = "socat" }], decision = "forbidden", justification = "Raw socket relays are disabled on login nodes." },
+  { pattern = [{ token = "telnet" }], decision = "forbidden", justification = "Telnet is disabled on login nodes." },
+  { pattern = [{ token = "wall" }], decision = "forbidden", justification = "Broadcasting to other users' terminals is disabled." },
+  { pattern = [{ token = "write" }], decision = "forbidden", justification = "Messaging other users' terminals is disabled." },
+
+  # Slurm scheduler admin & node power state
+  { pattern = [{ token = "scontrol" }, { token = "show" }, { token = "partition" }], decision = "forbidden", justification = "Use sinfo for partition discovery; Lua auto-routes jobs without --partition." },
+  { pattern = [{ token = "scontrol" }, { token = "reboot" }], decision = "forbidden", justification = "Rebooting cluster nodes via agents is forbidden." },
+  { pattern = [{ token = "scontrol" }, { token = "update" }, { token = "Node" }], decision = "forbidden", justification = "Modifying Slurm node state via agents is forbidden." },
+  { pattern = [{ token = "scontrol" }, { token = "update" }, { token = "node" }], decision = "forbidden", justification = "Modifying Slurm node state via agents is forbidden." },
+  { pattern = [{ token = "scontrol" }, { token = "update" }, { token = "Partition" }], decision = "forbidden", justification = "Modifying Slurm partitions via agents is forbidden." },
+  { pattern = [{ token = "scontrol" }, { token = "update" }, { token = "partition" }], decision = "forbidden", justification = "Modifying Slurm partitions via agents is forbidden." },
+  { pattern = [{ token = "sacctmgr" }, { token = "add" }], decision = "forbidden", justification = "Slurm accounting modifications are forbidden." },
+  { pattern = [{ token = "sacctmgr" }, { token = "modify" }], decision = "forbidden", justification = "Slurm accounting modifications are forbidden." },
+  { pattern = [{ token = "sacctmgr" }, { token = "remove" }], decision = "forbidden", justification = "Slurm accounting modifications are forbidden." },
+  { pattern = [{ token = "sacctmgr" }, { token = "create" }], decision = "forbidden", justification = "Slurm accounting modifications are forbidden." },
+  { pattern = [{ token = "sacctmgr" }, { token = "delete" }], decision = "forbidden", justification = "Slurm accounting modifications are forbidden." },
+  { pattern = [{ token = "shutdown" }], decision = "forbidden", justification = "System shutdown is forbidden." },
+  { pattern = [{ token = "reboot" }], decision = "forbidden", justification = "System reboot is forbidden." },
+  { pattern = [{ token = "init" }, { token = "0" }], decision = "forbidden", justification = "System halt is forbidden." },
+
+  # Prompt before job cancellation, process kills, permission changes, cron, or user lookups
+  { pattern = [{ token = "scancel" }], decision = "prompt", justification = "Confirm before cancelling Slurm jobs." },
+  { pattern = [{ token = "pkill" }], decision = "prompt", justification = "Confirm before killing processes by pattern." },
+  { pattern = [{ token = "killall" }], decision = "prompt", justification = "Confirm before killing processes by name." },
+  { pattern = [{ token = "chown" }], decision = "prompt", justification = "Confirm before changing file ownership." },
+  { pattern = [{ token = "chmod" }], decision = "prompt", justification = "Confirm before changing file permissions." },
+  { pattern = [{ token = "crontab" }], decision = "prompt", justification = "Confirm before modifying crontabs." },
+  { pattern = [{ token = "ldapsearch" }], decision = "prompt", justification = "User enumeration is restricted on shared clusters." },
+  { pattern = [{ token = "getent" }, { token = "passwd" }], decision = "prompt", justification = "User enumeration is restricted on shared clusters." }
+]
