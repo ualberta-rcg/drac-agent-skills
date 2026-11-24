@@ -27,6 +27,11 @@ const DENY_BASH_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /(?:^|[;&|]\s*)scontrol\s+(?:reboot|update\s+(?:node|partition))/i, reason: "Modifying Slurm node or partition state via agents is forbidden." },
   { pattern: /(?:^|[;&|]\s*)sacctmgr\s+(?:add|modify|remove|create|delete)\b/i, reason: "Slurm accounting modifications via agents are forbidden." },
   { pattern: /(?:^|[;&|]\s*)(?:shutdown|reboot|init\s+0)(?:\s|$)/, reason: "System power/reboot commands are forbidden." },
+  // Optional: block remote-control bridges and persistent web/API servers on shared login nodes.
+  // { pattern: /(?:^|[;&|]\s*)claude\s+(?:remote-control|--remote-control|--rc)\b/, reason: "Remote-control bridges are disabled on shared login nodes." },
+  // { pattern: /(?:^|[;&|]\s*)codex\s+(?:remote-control|app-server|exec-server)\b/, reason: "Remote-control/server daemons are disabled on shared login nodes." },
+  // { pattern: /(?:^|[;&|]\s*)opencode\s+(?:serve|web)\b/, reason: "Persistent agent web servers are disabled on shared login nodes." },
+  // { pattern: /(?:^|[;&|]\s*)agy\s+(?:remote-control|--remote-control)\b/, reason: "Remote-control bridges are disabled on shared login nodes." },
 ];
 
 const ASK_BASH_PATTERNS: Array<{ pattern: RegExp; label: string }> = [

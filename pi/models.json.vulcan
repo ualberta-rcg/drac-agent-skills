@@ -14,12 +14,18 @@
         {
           "id": "qwen38-27b",
           "name": "Qwen 3.8 27B (Vulcan Aleph)",
-          "contextWindow": 256000,
-          "maxTokens": 32768
+          "contextWindow": 524288,
+          "maxTokens": 131072
         },
         {
           "id": "gpt-oss-120b",
           "name": "GPT-OSS 120B (Vulcan Aleph)",
+          "contextWindow": 128000,
+          "maxTokens": 16384
+        },
+        {
+          "id": "gemma-4-26b-a4b",
+          "name": "Gemma 4 26B A4B (Vulcan Aleph)",
           "contextWindow": 128000,
           "maxTokens": 16384
         }

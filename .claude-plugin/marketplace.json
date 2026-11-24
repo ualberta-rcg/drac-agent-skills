@@ -1,0 +1,48 @@
+{
+  "name": "drac-agent-skills",
+  "owner": {
+    "name": "University of Alberta Research Computing",
+    "email": "khoja1@ualberta.ca"
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Alliance (DRAC) HPC cluster skills, multi-harness login-node guardrails, and curated scientific research skills"
+  },
+  "plugins": [
+    {
+      "name": "alliance-hpc",
+      "source": "./",
+      "description": "Core Digital Research Alliance of Canada HPC & cloud skills (Slurm, CVMFS/Lmod, Docs RAG, Arbutus OpenStack, GitLab)",
+      "category": "hpc",
+      "tags": ["hpc", "slurm", "cvmfs", "lmod", "openstack", "drac", "alliance"],
+      "strict": false,
+      "skills": [
+        "./skills/alliance-cvmfs",
+        "./skills/alliance-slurm",
+        "./skills/alliance-docs",
+        "./skills/alliance-arbutus",
+        "./skills/alliance-gitlab"
+      ]
+    },
+    {
+      "name": "community-science",
+      "source": "./",
+      "description": "Curated scientific & HPC research skills (Globus Compute, PyTorch Lightning, GPU optimization, Dask, Polars, Biopython, Scanpy, RDKit, Pymatgen, Scientific Visualization)",
+      "category": "science",
+      "tags": ["globus", "gpu", "pytorch", "dask", "polars", "bioinformatics", "chemistry", "materials", "visualization"],
+      "strict": false,
+      "skills": [
+        "./community-skills/skills/globus-compute",
+        "./community-skills/skills/pytorch-lightning",
+        "./community-skills/skills/optimize-for-gpu",
+        "./community-skills/skills/dask",
+        "./community-skills/skills/polars",
+        "./community-skills/skills/biopython",
+        "./community-skills/skills/scanpy",
+        "./community-skills/skills/rdkit",
+        "./community-skills/skills/pymatgen",
+        "./community-skills/skills/scientific-visualization"
+      ]
+    }
+  ]
+}

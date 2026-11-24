@@ -60,4 +60,13 @@ prefix_rules = [
   { pattern = [{ token = "crontab" }], decision = "prompt", justification = "Confirm before modifying crontabs." },
   { pattern = [{ token = "ldapsearch" }], decision = "prompt", justification = "User enumeration is restricted on shared clusters." },
   { pattern = [{ token = "getent" }, { token = "passwd" }], decision = "prompt", justification = "User enumeration is restricted on shared clusters." }
+
+  # Optional: block remote-control bridges and persistent web/app-server daemons on shared login nodes.
+  # , { pattern = [{ token = "codex" }, { token = "remote-control" }], decision = "forbidden", justification = "Remote-control bridges are disabled on shared login nodes." }
+  # , { pattern = [{ token = "codex" }, { token = "app-server" }], decision = "forbidden", justification = "Background app-server daemons are disabled on shared login nodes." }
+  # , { pattern = [{ token = "codex" }, { token = "exec-server" }], decision = "forbidden", justification = "Remote exec-server daemons are disabled on shared login nodes." }
+  # , { pattern = [{ token = "claude" }, { token = "remote-control" }], decision = "forbidden", justification = "Remote-control bridges are disabled on shared login nodes." }
+  # , { pattern = [{ token = "opencode" }, { token = "serve" }], decision = "forbidden", justification = "Persistent web/API servers are disabled on shared login nodes." }
+  # , { pattern = [{ token = "opencode" }, { token = "web" }], decision = "forbidden", justification = "Persistent web/API servers are disabled on shared login nodes." }
+  # , { pattern = [{ token = "agy" }, { token = "remote-control" }], decision = "forbidden", justification = "Remote-control bridges are disabled on shared login nodes." }
 ]

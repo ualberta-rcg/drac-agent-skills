@@ -8,3 +8,10 @@ check_for_update_on_startup = false
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 allow_login_shell = false
+
+# Optional: disable built-in OpenAI Statsig usage telemetry and /feedback uploads.
+# [analytics]
+# enabled = false
+#
+# [feedback]
+# enabled = false

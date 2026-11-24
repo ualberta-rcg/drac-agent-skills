@@ -1,0 +1,15 @@
+# ~/.aider.conf.yml — HPC login-node defaults for Aider.
+# Loads shared Alliance/Vulcan cluster instructions and disables outbound telemetry.
+
+read:
+  - /etc/agents/AGENTS.md
+
+analytics: false
+check-update: false
+show-release-notes: false
+
+# Optional: point Aider at hosted Vulcan Aleph inference (fill in your own key).
+# openai-api-base: https://inference.vulcan.alliancecan.ca/v1
+# openai-api-key: Put-Key-Here
+# model: openai/qwen38-27b
+# weak-model: openai/gpt-oss-120b

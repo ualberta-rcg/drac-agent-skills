@@ -45,6 +45,12 @@ priority = 900
 # --- Hard denies: credential and PII harvesting ---
 
 [[rule]]
+toolName = ["read_file", "read_many_files"]
+argsPattern = "(/etc/shadow|/etc/gshadow|/etc/sudoers|/etc/sssd/|/root/|/var/spool/cron/|/var/log/|\\.ssh/|\\.gnupg/|\\.kube/|\\.docker/config\\.json|\\.git-credentials|\\.netrc|credentials\\.json|(^|/|\\\\\")\\.env(\\.|\\\\\"|$)|\\.codex/auth\\.json|\\.pi/agent/auth\\.json)"
+decision = "deny"
+priority = 895
+
+[[rule]]
 toolName = "run_shell_command"
 commandRegex = "(/etc/shadow|/etc/gshadow|/etc/sudoers|/etc/sssd/|/root/|/var/spool/cron/|/var/log/|\\.ssh/|\\.gnupg/|\\.kube/|\\.docker/config\\.json|\\.git-credentials|\\.netrc|credentials\\.json|(^|/)\\.env(\\.|$)|\\.codex/auth\\.json|\\.pi/agent/auth\\.json)"
 decision = "deny"
@@ -63,3 +69,10 @@ toolName = "run_shell_command"
 commandPrefix = ["scancel", "pkill", "killall", "chown", "chmod", "crontab"]
 decision = "ask_user"
 priority = 800
+
+# --- Optional: block remote-control daemons & persistent agent web servers on login nodes ---
+# [[rule]]
+# toolName = "run_shell_command"
+# commandPrefix = ["claude remote-control", "claude --remote-control", "claude --rc", "codex remote-control", "codex app-server", "codex exec-server", "opencode serve", "opencode web", "agy remote-control", "agy --remote-control"]
+# decision = "deny"
+# priority = 895

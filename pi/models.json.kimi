@@ -1,0 +1,17 @@
+{
+  "providers": {
+    "kimi": {
+      "baseUrl": "https://api.moonshot.ai/v1",
+      "api": "openai-completions",
+      "apiKey": "Put-Key-Here",
+      "models": [
+        {
+          "id": "kimi-k3",
+          "name": "Kimi K3 (Moonshot)",
+          "contextWindow": 256000,
+          "maxTokens": 32768
+        }
+      ]
+    }
+  }
+}

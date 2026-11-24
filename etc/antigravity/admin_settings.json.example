@@ -1,0 +1,7 @@
+{
+  "_comment": "Optional system-wide reference for Google Antigravity (/etc/antigravity/admin_settings.json). Remove _comment before deploying if strict JSON validation is enabled.",
+  "enableTelemetry": false,
+  "featureControls": {
+    "remoteControlEnabled": false
+  }
+}
