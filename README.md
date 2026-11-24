@@ -119,21 +119,7 @@ Pi (`@earendil-works/pi-coding-agent` / `@mariozechner/pi-coding-agent`) ships w
 | `etc/cron.d/claude-motd` | Cron job that fires `update-motd.sh` every 5 minutes. |
 | `etc/ansible/playbooks/93-ai-agents.yaml` | Boot-time agent install playbook: Claude Code (`apt/latest`), Codex + OpenCode (pinned binaries), Antigravity CLI (official installer). |
 
-### Login Status Banner (`vulcan-status`)
-
-The per-user login banner stack: renderer, root cache baker, config, login hook, and systemd timer. The baker refreshes `/run/vulcan-motd/` every 10 min so `vulcan-status` never calls Slurm synchronously at login.
-
-![vulcan-status login banner](assets/motd-example.png)
-
-| File | Target |
-|---|---|
-| `usr/local/bin/vulcan-status` | `/usr/local/bin/` — the renderer (fairshare tiers, LevelFS verdicts, control-char sanitization, `--help`) |
-| `usr/local/sbin/vulcan-motd-bake` | `/usr/local/sbin/` — 10-min cache baker (emits `gpu_usable`) |
-| `etc/vulcan-motd/{motd.conf,announce.txt}` | `/etc/vulcan-motd/` — tier thresholds/color bands; announcements placeholder |
-| `etc/profile.d/zz-vulcan-motd.sh` | `/etc/profile.d/` — login hook that runs the renderer |
-| `etc/systemd/system/vulcan-motd-bake.{service,timer}` | `/etc/systemd/system/` — run `systemctl enable --now vulcan-motd-bake.timer` |
-
-The renderer falls back to raw free GPUs if `gpu_usable` is absent, so old/new baker+renderer combos are safe in any order.
+The Slurm login banner has moved to [ualberta-rcg/vulcan-status](https://github.com/ualberta-rcg/vulcan-status). The Claude Code announcement rotator remains here.
 
 ### Deploying Org Policies
 
@@ -153,14 +139,6 @@ sudo cp etc/profile.d/ai-agent-skills.sh /etc/profile.d/
 # MOTD rotator cron job
 sudo cp etc/cron.d/claude-motd /etc/cron.d/
 sudo systemctl restart cron   # or cronie / crond, depending on distro
-
-# vulcan-status login banner
-sudo cp usr/local/bin/vulcan-status /usr/local/bin/
-sudo cp usr/local/sbin/vulcan-motd-bake /usr/local/sbin/
-sudo cp -r etc/vulcan-motd /etc/
-sudo cp etc/profile.d/zz-vulcan-motd.sh /etc/profile.d/
-sudo cp etc/systemd/system/vulcan-motd-bake.* /etc/systemd/system/
-sudo systemctl enable --now vulcan-motd-bake.timer
 ```
 
 ---
