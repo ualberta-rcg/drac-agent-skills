@@ -226,11 +226,8 @@ sudo systemctl restart cron   # or cronie / crond
 
 - [University of Alberta Research Computing](https://www.ualberta.ca/en/information-services-and-technology/research-computing/index.html)
 - [Aleph — Vulcan Science Inference Cluster](https://github.com/ualberta-rcg/aleph)
-- [vulcan-status — Slurm HPC Login Banner](https://github.com/ualberta-rcg/vulcan-status)
-- [DeepThought — Research Computing Harness](https://github.com/ualberta-rcg/deepthought)
 - [Digital Research Alliance of Canada Documentation](https://docs.alliancecan.ca/)
 - [GitHub CLI `gh skill install` Manual](https://cli.github.com/manual/gh_skill_install)
-- [Changelog](./CHANGELOG.md)
 
 ---
 
